@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Introduction aux LLMs — démos interactives</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:#FAF9F5;color:#1A1A17;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:900px;margin:0 auto;padding:30px 20px 70px}
+  header h1{font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0 0 5px}
+  header p{margin:0 0 24px;color:#5F5E5A;font-size:14px;line-height:1.5;max-width:60ch}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .tab{
+    padding:8px 16px;font-size:14px;cursor:pointer;border-radius:99px;
+    border:0.5px solid #D9D6CE;background:#F5F3EE;color:#5F5E5A;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .tab:hover{background:#ECEAE3;color:#1A1A17}
+  .tab.active{background:#3C3489;color:#EEEDFE;border-color:#3C3489}
+  .tab:focus-visible{outline:2px solid #7F77DD;outline-offset:2px}
+  .stage{position:relative}
+  .wframe{
+    width:100%;border:0.5px solid #D9D6CE;border-radius:12px;background:#fff;
+    display:block;color-scheme:light;
+  }
+  .frame-note{margin-top:14px;font-size:12px;color:#8B8A83;line-height:1.5}
+  @media (max-width:560px){
+    .app{padding:22px 14px 60px}
+    header h1{font-size:20px}
+    .tab{padding:7px 13px;font-size:13px}
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Introduction aux LLMs — démos interactives</h1>
+      <p>Quatre widgets pour suivre l'arc du cours, du modèle le plus simple (compter des paires de mots) jusqu'au mécanisme d'attention des transformers. Choisissez un onglet.</p>
+    </header>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Démos interactives"></nav>
+    <div class="stage" id="stage"></div>
+    <p class="frame-note">Astuce : chaque démo a ses propres sous-étapes. L'onglet « Analogies » charge Chart.js depuis un CDN (connexion requise).</p>
+  </div>
+
+  <template data-widget="0">
+
+<style>
+  .section { margin: 1.5rem 0; }
+  .section-title { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+  .corpus-area { width: 100%; box-sizing: border-box; font-size: 13px; font-family: var(--font-mono); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; background: var(--color-background-secondary); color: var(--color-text-primary); resize: vertical; }
+  .btn { padding: 7px 18px; font-size: 14px; cursor: pointer; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+  .btn:hover { background: var(--color-background-secondary); }
+  .btn-primary { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+  .btn-primary:hover { background: #534AB7; }
+  .word-pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 13px; font-family: var(--font-mono); margin: 3px; cursor: pointer; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .word-pill.selected { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+  .prob-bar-wrap { display: flex; align-items: center; gap: 10px; margin: 5px 0; }
+  .prob-label { font-size: 13px; font-family: var(--font-mono); min-width: 100px; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prob-bar-bg { flex: 1; height: 18px; background: var(--color-background-secondary); border-radius: 4px; overflow: hidden; }
+  .prob-bar-fill { height: 100%; background: #7F77DD; border-radius: 4px; transition: width 0.3s; }
+  .prob-val { font-size: 12px; min-width: 38px; text-align: right; color: var(--color-text-secondary); }
+  .generated-text { font-size: 15px; font-family: var(--font-serif); background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px 18px; line-height: 2; min-height: 60px; color: var(--color-text-primary); }
+  .gen-word.new { background: #EEEDFE; border-radius: 3px; padding: 0 2px; color: #3C3489; }
+  .temp-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+  .temp-label { font-size: 13px; color: var(--color-text-secondary); min-width: 90px; }
+  .step-pills { display: flex; gap: 8px; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  .step-pill { padding: 5px 14px; font-size: 13px; border-radius: 99px; border: 0.5px solid var(--color-border-secondary); cursor: pointer; background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .step-pill.active { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .info-box { font-size: 13px; color: var(--color-text-secondary); border-left: 2px solid #7F77DD; padding: 8px 12px; margin: 0.75rem 0; line-height: 1.6; background: var(--color-background-secondary); border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; }
+  .bigram-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: 8px; }
+  .bigram-card { background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 8px 10px; font-size: 12px; font-family: var(--font-mono); }
+  .bigram-pair { font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+  .bigram-count { color: var(--color-text-secondary); }
+  .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 16px; font-size: 13px; }
+  .n-btn { padding: 4px 12px; font-size: 12px; cursor: pointer; border-radius: 99px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text-secondary); margin: 2px; }
+  .n-btn.active { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+  .corpus-pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 0.75rem 0; }
+  .corpus-btn { padding: 6px 14px; font-size: 13px; cursor: pointer; border-radius: 99px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .corpus-btn:hover { background: var(--color-background-primary); color: var(--color-text-primary); }
+  .corpus-btn.active { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+</style>
+
+<h2 class="sr-only">Démonstration interactive : modèle N-gramme sur Candide de Voltaire</h2>
+
+<div class="step-pills" id="stepPills">
+  <div class="step-pill active" data-step="0">1 — Corpus</div>
+  <div class="step-pill" data-step="1">2 — Bigrammes</div>
+  <div class="step-pill" data-step="2">3 — Prédire</div>
+  <div class="step-pill" data-step="3">4 — Générer</div>
+  <div class="step-pill" data-step="4">5 — Vers les LLMs</div>
+</div>
+
+<div class="panel active" id="panel0">
+  <div class="section">
+    <div class="section-title" id="corpusTitle">Corpus — Candide, Voltaire (1759) — domaine public</div>
+    <div class="info-box" id="corpusNote">Trois chapitres de Candide. Tu peux modifier le texte ou en coller un autre. Le modèle se reconstruit à chaque analyse.</div>
+    <div class="corpus-pills" id="corpusPills">
+      <button class="corpus-btn active" data-corpus="candide" onclick="loadCorpus('candide')">Candide — Voltaire (FR)</button>
+      <button class="corpus-btn" data-corpus="jekyll" onclick="loadCorpus('jekyll')">Dr Jekyll &amp; Mr Hyde — Stevenson (EN)</button>
+    </div>
+    <textarea class="corpus-area" id="corpusInput" rows="8">Il y avait en Vestphalie dans le château de monsieur le baron de Thunder-ten-tronckh un jeune garçon à qui la nature avait donné les mœurs les plus douces. Sa physionomie annonçait son âme. Il avait le jugement assez droit avec l esprit le plus simple. Les anciens domestiques de la maison soupçonnaient qu il était fils de la sœur de monsieur le baron et d un bon et honnête gentilhomme du voisinage. Monsieur le baron était un des plus puissants seigneurs de la Vestphalie car son château avait une porte et des fenêtres. Sa grande salle même était ornée d une tapisserie. Madame la baronne pesait environ trois cent cinquante livres et s attirait par là une très grande considération. Sa fille Cunégonde âgée de dix-sept ans était haute en couleur fraîche grasse appétissante. Le fils du baron paraissait en tout digne de son père. Le précepteur Pangloss était l oracle de la maison. Il enseignait la métaphysico-théologo-cosmolonigologie. Il prouvait admirablement qu il n y a point d effet sans cause. Candide écoutait attentivement et croyait innocemment. Un jour Cunégonde en se promenant près du château vit le docteur Pangloss qui donnait une leçon de physique à la femme de chambre. Cunégonde avait beaucoup de disposition pour les sciences. Elle observa avec attention les expériences réitérées du docteur. Elle rentra tout agitée toute pensive toute remplie du désir d être savante. Le lendemain après le dîner comme on sortait de table Cunégonde et Candide se trouvèrent derrière un paravent. Cunégonde laissa tomber son mouchoir Candide le ramassa elle lui prit innocemment la main. Monsieur le baron passa auprès du paravent et voyant cette cause et cet effet chassa Candide du château à grands coups de pied. Cunégonde s évanouit. Elle fut souffletée par madame la baronne dès qu elle fut revenue à elle-même. Et tout fut consterné dans le plus beau et le plus agréable des châteaux possibles. Candide chassé du paradis terrestre marcha longtemps sans savoir où pleurant levant les yeux au ciel les tournant souvent vers le plus beau des châteaux. Il se coucha sans souper au milieu des champs entre deux sillons. La neige tombait à gros flocons. Candide transi de froid sans souper et sans argent se traînait vers la ville voisine qui s appelait Waldberghoff-trarbk-dikdorff. Il s arrêtait de temps en temps à la porte des cabarets sans oser entrer. Un jour il se présenta deux hommes habillés de bleu. L un d eux dit à Candide voilà un jeune homme bien fait et de la bonne taille. Candide s inclina modestement. On lui demanda s il n avait pas une grande affection pour le roi des Bulgares. Candide répondit qu il n avait point encore eu cet honneur. Il fut aussitôt lié ferré mené dans un régiment. On lui apprit à tourner à droite à gauche à hausser la baguette à remettre la baguette. On lui donna trente coups de bâton. Le lendemain il fit l exercice un peu moins mal et il ne reçut que vingt coups. Le surlendemain on ne lui en donna que dix et il fut regardé par ses camarades comme un prodige. Candide tout stupéfait ne démêlait pas encore trop bien comment il était un héros. Il s avisa un beau jour de printemps de s aller promener faisant un pas devant l autre. Il crut que c était là un privilège de l espèce humaine ainsi que de l espèce animale. Il n avait pas fait deux lieues que voilà quatre autres héros de six pieds qui l atteignirent qui le lièrent qui le menèrent dans un cachot. On lui demanda en justice ce qu il aimait le mieux d être fusillé ou pendu. Il dit que les volontés humaines sont libres et qu il ne voulait ni l un ni l autre. Il fallut faire un choix. Il se détermina en vertu du don de Dieu qu on nomme liberté à passer par les baguettes trente-six fois. Deux mille hommes composaient le régiment. Après la première et la deuxième course il n y en avait déjà plus que deux mille qui lui donnaient chacun deux mille coups de baguette. Le roi des Bulgares passa dans ce moment et s informa du crime du patient. Ce roi avait un grand génie. Il comprit que c était un jeune métaphysicien fort ignorant des choses de ce monde et il lui accorda sa grâce. Un brave chirurgien guérit Candide en trois semaines. Il avait déjà un peu de peau et pouvait marcher quand le roi de Bulgarie livra bataille au roi des Abares. Rien n était si beau si leste si brillant si bien ordonné que les deux armées. Les trompettes les fifres les hautbois les tambours les canons formaient une harmonie telle qu il n y en eut jamais en enfer. Les canons renversèrent d abord à peu près six mille hommes de chaque côté. Les mousqueteries ôtèrent du meilleur des mondes environ neuf à dix mille coquins qui en infectaient la surface. La baïonnette fut aussi la raison suffisante de la mort de quelques milliers d hommes. Le tout pouvait se monter à une trentaine de mille âmes. Candide qui tremblait comme un philosophe se cacha du mieux qu il put pendant cette boucherie héroïque. Enfin tandis que les deux rois faisaient chanter des Te Deum chacun dans son camp Candide prit le parti d aller raisonner ailleurs des effets et des causes. Il passa par-dessus des tas de morts et d agonisants et gagna d abord un village voisin. Il était en cendres car les Bulgares l avaient brûlé selon les lois du droit public. Des vieillards criblés de coups regardaient mourir leurs femmes égorgées qui tenaient leurs enfants à leurs mamelles sanglantes. Des filles éventrées après avoir assouvi les besoins naturels de quelques héros rendaient les derniers soupirs. D autres à demi brûlées criaient qu on achevât de leur donner la mort. Candide s enfuit au plus vite dans un autre village. Il appartenait aux Bulgares et les héros abares l avaient traité de même. Candide toujours marchant sur des membres palpitants ou à travers des ruines arriva enfin hors du théâtre de la guerre portant quelques petites provisions dans son bissac et n oubliant jamais mademoiselle Cunégonde.</textarea>
+    <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+      <button class="btn btn-primary" onclick="buildModel()">Analyser →</button>
+      <span id="buildStatus" style="font-size:13px; color: var(--color-text-secondary);"></span>
+    </div>
+    <div id="statsRow" class="stats-row" style="display:none;">
+      <div class="stat-card"><span style="color:var(--color-text-secondary);">Tokens</span><br><span id="tokenCount" style="font-size:22px;font-weight:500;">0</span></div>
+      <div class="stat-card"><span style="color:var(--color-text-secondary);">Mots distincts</span><br><span id="vocabCount" style="font-size:22px;font-weight:500;">0</span></div>
+      <div class="stat-card"><span style="color:var(--color-text-secondary);">Bigrammes</span><br><span id="bigramCount" style="font-size:22px;font-weight:500;">0</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="panel1">
+  <div class="section">
+    <div class="section-title">Les bigrammes les plus fréquents</div>
+    <div class="info-box">Le modèle a compté toutes les paires de mots consécutifs. C'est l'intégralité de sa "connaissance".</div>
+    <div id="bigramDisplay" class="bigram-grid"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel2">
+  <div class="section">
+    <div class="section-title">Prédire le mot suivant</div>
+    <div class="info-box">Choisis un mot : le modèle affiche la distribution de probabilité des mots qui le suivent dans le corpus.</div>
+    <div id="wordPills" style="margin-bottom: 1rem; max-height: 120px; overflow-y: auto;"></div>
+    <div id="probDisplay"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel3">
+  <div class="section">
+    <div class="section-title">Générer du texte</div>
+    <div class="info-box">À chaque étape, le modèle tire au sort le mot suivant selon les probabilités bigrammes. La température modifie la distribution avant le tirage.</div>
+    <div class="temp-row">
+      <span class="temp-label">Température</span>
+      <input type="range" id="tempSlider" min="1" max="30" value="10" step="1" style="flex:1;">
+      <span id="tempVal" style="font-size:14px;min-width:36px;text-align:right;color:var(--color-text-primary);">1.0</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary);margin:-4px 0 10px 102px;">
+      <span>déterministe</span><span>aléatoire</span>
+    </div>
+    <div style="margin: 8px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span style="font-size:13px;color:var(--color-text-secondary);">Démarrer avec :</span>
+      <select id="startWord" style="font-size:13px;padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);"></select>
+      <button class="btn btn-primary" onclick="generateText()">Générer</button>
+    </div>
+    <div id="generatedOut" class="generated-text" style="min-height:70px;"></div>
+    <div id="generatedProbs" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel4">
+  <div class="section">
+    <div class="section-title">Du bigramme au LLM — ce qui change</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;">
+        <div style="font-weight:500;font-size:14px;margin-bottom:6px;">Bigramme <span style="font-weight:400;color:var(--color-text-secondary);">— ce qu'on vient de faire</span></div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">Regarde 1 mot en arrière. Connaissance = une table de fréquences. Pas de compréhension, juste du comptage.</div>
+      </div>
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;">
+        <div style="font-weight:500;font-size:14px;margin-bottom:6px;">N-gramme <span style="font-weight:400;color:var(--color-text-secondary);">— même idée, plus de mémoire</span></div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">Regarde N mots en arrière. "Candide marcha" → suivant probable : "longtemps". Mais le nombre de combinaisons explose avec N : impossible à l'échelle.</div>
+      </div>
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;border-color:#AFA9EC;">
+        <div style="font-weight:500;font-size:14px;margin-bottom:6px;color:#3C3489;">Réseau de neurones <span style="font-weight:400;color:var(--color-text-secondary);">— même tâche, autre représentation</span></div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">Les mots deviennent des vecteurs (embeddings). Au lieu de compter, on apprend des poids par rétropropagation. La sortie reste une distribution de probabilités sur le vocabulaire.</div>
+      </div>
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;background:var(--color-background-secondary);">
+        <div style="font-weight:500;font-size:14px;margin-bottom:6px;color:#3C3489;">LLM — même principe, échelle radicale</div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">Regarde toute la fenêtre de contexte en parallèle (mécanisme d'attention). Des milliards de paramètres, entraînés sur des centaines de milliards de tokens. La tâche est toujours : <span style="color:var(--color-text-primary);font-weight:500;">P(mot suivant | tout ce qui précède)</span>.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CORPORA = {
+  candide: {
+    label: 'Candide, Voltaire (1759) — domaine public',
+    note: 'Trois chapitres de Candide. Tu peux modifier le texte ou en coller un autre. Le modèle se reconstruit à chaque analyse.',
+    text: null
+  },
+  jekyll: {
+    label: 'The Strange Case of Dr Jekyll and Mr Hyde, R. L. Stevenson (1886) — domaine public',
+    note: "Chapitre 1 (« Story of the Door »), texte original anglais. Le modèle bigramme est purement statistique : il fonctionne sur n'importe quelle langue.",
+    text: `Mr. Utterson the lawyer was a man of a rugged countenance that was never lighted by a smile; cold, scanty and embarrassed in discourse; backward in sentiment; lean, long, dusty, dreary and yet somehow lovable. At friendly meetings, and when the wine was to his taste, something eminently human beaconed from his eye; something indeed which never found its way into his talk, but which spoke not only in these silent symbols of the after-dinner face, but more often and loudly in the acts of his life. He was austere with himself; drank gin when he was alone, to mortify a taste for vintages; and though he enjoyed the theatre, had not crossed the doors of one for twenty years. But he had an approved tolerance for others; sometimes wondering, almost with envy, at the high pressure of spirits involved in their misdeeds; and in any extremity inclined to help rather than to reprove. "I incline to Cain's heresy," he used to say quaintly: "I let my brother go to the devil in his own way." In this character, it was frequently his fortune to be the last reputable acquaintance and the last good influence in the lives of downgoing men. And to such as these, so long as they came about his chambers, he never marked a shade of change in his demeanour.
+No doubt the feat was easy to Mr. Utterson; for he was undemonstrative at the best, and even his friendship seemed to be founded in a similar catholicity of good-nature. It is the mark of a modest man to accept his friendly circle ready-made from the hands of opportunity; and that was the lawyer's way. His friends were those of his own blood or those whom he had known the longest; his affections, like ivy, were the growth of time, they implied no aptness in the object. Hence, no doubt the bond that united him to Mr. Richard Enfield, his distant kinsman, the well-known man about town. It was a nut to crack for many, what these two could see in each other, or what subject they could find in common. It was reported by those who encountered them in their Sunday walks, that they said nothing, looked singularly dull and would hail with obvious relief the appearance of a friend. For all that, the two men put the greatest store by these excursions, counted them the chief jewel of each week, and not only set aside occasions of pleasure, but even resisted the calls of business, that they might enjoy them uninterrupted.
+It chanced on one of these rambles that their way led them down a by-street in a busy quarter of London. The street was small and what is called quiet, but it drove a thriving trade on the weekdays. The inhabitants were all doing well, it seemed, and all emulously hoping to do better still, and laying out the surplus of their gains in coquetry; so that the shop fronts stood along that thoroughfare with an air of invitation, like rows of smiling saleswomen. Even on Sunday, when it veiled its more florid charms and lay comparatively empty of passage, the street shone out in contrast to its dingy neighbourhood, like a fire in a forest; and with its freshly painted shutters, well-polished brasses, and general cleanliness and gaiety of note, instantly caught and pleased the eye of the passenger.
+Two doors from one corner, on the left hand going east the line was broken by the entry of a court; and just at that point a certain sinister block of building thrust forward its gable on the street. It was two storeys high; showed no window, nothing but a door on the lower storey and a blind forehead of discoloured wall on the upper; and bore in every feature, the marks of prolonged and sordid negligence. The door, which was equipped with neither bell nor knocker, was blistered and distained. Tramps slouched into the recess and struck matches on the panels; children kept shop upon the steps; the schoolboy had tried his knife on the mouldings; and for close on a generation, no one had appeared to drive away these random visitors or to repair their ravages.
+Mr. Enfield and the lawyer were on the other side of the by-street; but when they came abreast of the entry, the former lifted up his cane and pointed.
+"Did you ever remark that door?" he asked; and when his companion had replied in the affirmative, "It is connected in my mind," added he, "with a very odd story."
+"Indeed?" said Mr. Utterson, with a slight change of voice, "and what was that?"
+"Well, it was this way," returned Mr. Enfield: "I was coming home from some place at the end of the world, about three o'clock of a black winter morning, and my way lay through a part of town where there was literally nothing to be seen but lamps. Street after street and all the folks asleep - street after street, all lighted up as if for a procession and all as empty as a church - till at last I got into that state of mind when a man listens and listens and begins to long for the sight of a policeman. All at once, I saw two figures: one a little man who was stumping along eastward at a good walk, and the other a girl of maybe eight or ten who was running as hard as she was able down a cross street. Well, sir, the two ran into one another naturally enough at the corner; and then came the horrible part of the thing; for the man trampled calmly over the child's body and left her screaming on the ground. It sounds nothing to hear, but it was hellish to see. It wasn't like a man; it was like some damned Juggernaut. I gave a few halloa, took to my heels, collared my gentleman, and brought him back to where there was already quite a group about the screaming child. He was perfectly cool and made no resistance, but gave me one look, so ugly that it brought out the sweat on me like running. The people who had turned out were the girl's own family; and pretty soon, the doctor, for whom she had been sent, put in his appearance. Well, the child was not much the worse, more frightened, according to the Sawbones; and there you might have supposed would be an end to it. But there was one curious circumstance. I had taken a loathing to my gentleman at first sight. So had the child's family, which was only natural. But the doctor's case was what struck me. He was the usual cut and dry apothecary, of no particular age and colour, with a strong Edinburgh accent and about as emotional as a bagpipe. Well, sir, he was like the rest of us; every time he looked at my prisoner, I saw that Sawbones turn sick and white with the desire to kill him. I knew what was in his mind, just as he knew what was in mine; and killing being out of the question, we did the next best. We told the man we could and would make such a scandal out of this as should make his name stink from one end of London to the other. If he had any friends or any credit, we undertook that he should lose them. And all the time, as we were pitching it in red hot, we were keeping the women off him as best we could for they were as wild as harpies. I never saw a circle of such hateful faces; and there was the man in the middle, with a kind of black sneering coolness - frightened too, I could see that - but carrying it off, sir, really like Satan. 'If you choose to make capital out of this accident,' said he, 'I am naturally helpless. No gentleman but wishes to avoid a scene,' says he. 'Name your figure.' Well, we screwed him up to a hundred pounds for the child's family; he would have clearly liked to stick out; but there was something about the lot of us that meant mischief, and at last he struck. The next thing was to get the money; and where do you think he carried us but to that place with the door? - whipped out a key, went in, and presently came back with the matter of ten pounds in gold and a cheque for the balance on Coutts's, drawn payable to bearer and signed with a name that I can't mention, though it's one of the points of my story, but it was a name at least very well known and often printed. The figure was stiff; but the signature was good for more than that if it was only genuine. I took the liberty of pointing out to my gentleman that the whole business looked apocryphal, and that a man does not, in real life, walk into a cellar door at four in the morning and come out with another man's cheque for close upon a hundred pounds. But he was quite easy and sneering. 'Set your mind at rest,' says he, 'I will stay with you till the banks open and cash the cheque myself.' So we all set off, the doctor, and the child's father, and our friend and myself, and passed the rest of the night in my chambers; and next day, when we had breakfasted, went in a body to the bank. I gave in the cheque myself, and said I had every reason to believe it was a forgery. Not a bit of it. The cheque was genuine."
+"Tut-tut!" said Mr. Utterson.
+"I see you feel as I do," said Mr. Enfield. "Yes, it's a bad story. For my man was a fellow that nobody could have to do with, a really damnable man; and the person that drew the cheque is the very pink of the proprieties, celebrated too, and (what makes it worse) one of your fellows who do what they call good. Blackmail, I suppose; an honest man paying through the nose for some of the capers of his youth. Black Mail House is what I call the place with the door, in consequence. Though even that, you know, is far from explaining all," he added, and with the words fell into a vein of musing.
+From this he was recalled by Mr. Utterson asking rather suddenly: "And you don't know if the drawer of the cheque lives there?"
+"A likely place, isn't it?" returned Mr. Enfield. "But I happen to have noticed his address; he lives in some square or other."
+"And you never asked about the - place with the door?" said Mr. Utterson.
+"No, sir; I had a delicacy," was the reply. "I feel very strongly about putting questions; it partakes too much of the style of the day of judgment. You start a question, and it's like starting a stone. You sit quietly on the top of a hill; and away the stone goes, starting others; and presently some bland old bird (the last you would have thought of) is knocked on the head in his own back garden and the family have to change their name. No sir, I make it a rule of mine: the more it looks like Queer Street, the less I ask."
+"A very good rule, too," said the lawyer.
+"But I have studied the place for myself," continued Mr. Enfield. "It seems scarcely a house. There is no other door, and nobody goes in or out of that one but, once in a great while, the gentleman of my adventure. There are three windows looking on the court on the first floor; none below; the windows are always shut but they're clean. And then there is a chimney which is generally smoking; so somebody must live there. And yet it's not so sure; for the buildings are so packed together about the court, that it's hard to say where one ends and another begins."
+The pair walked on again for a while in silence; and then "Enfield," said Mr. Utterson, "that's a good rule of yours."
+"Yes, I think it is," returned Enfield.
+"But for all that," continued the lawyer, "there's one point I want to ask. I want to ask the name of that man who walked over the child."
+"Well," said Mr. Enfield, "I can't see what harm it would do. It was a man of the name of Hyde."
+"Hm," said Mr. Utterson. "What sort of a man is he to see?"
+"He is not easy to describe. There is something wrong with his appearance; something displeasing, something down-right detestable. I never saw a man I so disliked, and yet I scarce know why. He must be deformed somewhere; he gives a strong feeling of deformity, although I couldn't specify the point. He's an extraordinary looking man, and yet I really can name nothing out of the way. No, sir; I can make no hand of it; I can't describe him. And it's not want of memory; for I declare I can see him this moment."
+Mr. Utterson again walked some way in silence and obviously under a weight of consideration. "You are sure he used a key?" he inquired at last.
+"My dear sir..." began Enfield, surprised out of himself.
+"Yes, I know," said Utterson; "I know it must seem strange. The fact is, if I do not ask you the name of the other party, it is because I know it already. You see, Richard, your tale has gone home. If you have been inexact in any point you had better correct it."
+"I think you might have warned me," returned the other with a touch of sullenness. "But I have been pedantically exact, as you call it. The fellow had a key; and what's more, he has it still. I saw him use it not a week ago."
+Mr. Utterson sighed deeply but said never a word; and the young man presently resumed. "Here is another lesson to say nothing," said he. "I am ashamed of my long tongue. Let us make a bargain never to refer to this again."
+"With all my heart," said the lawyer. "I shake hands on that, Richard."
+`
+  }
+};
+
+function loadCorpus(key){
+  const c = CORPORA[key];
+  if(!c) return;
+  if(c.text !== null) document.getElementById('corpusInput').value = c.text;
+  document.getElementById('corpusTitle').textContent = 'Corpus — ' + c.label;
+  document.getElementById('corpusNote').textContent = c.note;
+  document.querySelectorAll('.corpus-btn').forEach(b => b.classList.toggle('active', b.dataset.corpus === key));
+  buildModel();
+}
+
+let model = {};
+let vocab = [];
+let corpus = [];
+
+function tokenize(text) {
+  return text.toLowerCase()
+    .replace(/[«»""„‟]/g, ' ')
+    .replace(/[.,;:!?()\[\]{}"'\/\\—–\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(w => w.length > 0);
+}
+
+function buildModel() {
+  const text = document.getElementById('corpusInput').value;
+  corpus = tokenize(text);
+  model = {};
+  const vocabSet = new Set(corpus);
+  vocab = Array.from(vocabSet).sort();
+
+  for (let i = 0; i < corpus.length - 1; i++) {
+    const w = corpus[i];
+    const next = corpus[i+1];
+    if (!model[w]) model[w] = {};
+    model[w][next] = (model[w][next] || 0) + 1;
+  }
+
+  let bigramTotal = 0;
+  for (const w of Object.keys(model)) bigramTotal += Object.keys(model[w]).length;
+
+  document.getElementById('tokenCount').textContent = corpus.length;
+  document.getElementById('vocabCount').textContent = vocab.length;
+  document.getElementById('bigramCount').textContent = bigramTotal;
+  document.getElementById('statsRow').style.display = 'flex';
+  document.getElementById('buildStatus').textContent = '✓ Modèle construit';
+
+  renderBigrams();
+  renderWordPills();
+  populateStartWord();
+}
+
+function renderBigrams() {
+  const container = document.getElementById('bigramDisplay');
+  const pairs = [];
+  for (const w of Object.keys(model)) {
+    for (const next of Object.keys(model[w])) {
+      pairs.push({ w, next, count: model[w][next] });
+    }
+  }
+  pairs.sort((a,b) => b.count - a.count);
+  container.innerHTML = pairs.slice(0, 30).map(p =>
+    `<div class="bigram-card"><div class="bigram-pair">${p.w} → ${p.next}</div><div class="bigram-count">${p.count}×</div></div>`
+  ).join('');
+}
+
+function renderWordPills() {
+  const container = document.getElementById('wordPills');
+  const words = Object.keys(model).sort();
+  container.innerHTML = words.map(w =>
+    `<span class="word-pill" data-word="${w}" onclick="selectWord('${w}')">${w}</span>`
+  ).join('');
+  const interesting = ['candide','il','le','la','les','un','une','de'];
+  const first = interesting.find(w => model[w]) || words[0];
+  if (first) selectWord(first);
+}
+
+function selectWord(word) {
+  document.querySelectorAll('.word-pill').forEach(p => p.classList.remove('selected'));
+  const pill = document.querySelector(`.word-pill[data-word="${word}"]`);
+  if (pill) { pill.classList.add('selected'); pill.scrollIntoView({block:'nearest'}); }
+  renderProbs(word);
+}
+
+function getProbs(word, temp) {
+  const counts = model[word];
+  if (!counts) return [];
+  const t = temp || 1.0;
+  const entries = Object.entries(counts);
+  const total = entries.reduce((s,[,c]) => s+c, 0);
+  const raw = entries.map(([w,c]) => [w, c/total]);
+  const scaled = raw.map(([w,p]) => [w, Math.pow(p, 1/t)]);
+  const scaledSum = scaled.reduce((s,[,p]) => s+p, 0);
+  return scaled.map(([w,p]) => ({ word: w, prob: p/scaledSum, raw: raw.find(r=>r[0]===w)[1] }))
+    .sort((a,b) => b.prob - a.prob);
+}
+
+function renderProbs(word) {
+  const container = document.getElementById('probDisplay');
+  const probs = getProbs(word, 1.0);
+  if (!probs.length) { container.innerHTML = '<div style="font-size:13px;color:var(--color-text-secondary);">Ce mot n\'est jamais suivi d\'un autre dans le corpus.</div>'; return; }
+  const top = probs.slice(0, 8);
+  container.innerHTML = `
+    <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:10px;">
+      Après <b style="color:var(--color-text-primary);">${word}</b>, le modèle prédit :
+    </div>
+    ${top.map(p => `
+      <div class="prob-bar-wrap">
+        <span class="prob-label">${p.word}</span>
+        <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${(p.prob*100).toFixed(1)}%"></div></div>
+        <span class="prob-val">${(p.prob*100).toFixed(0)}%</span>
+      </div>`).join('')}
+    ${probs.length > 8 ? `<div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px;">+${probs.length-8} autres mots possibles</div>` : ''}
+  `;
+}
+
+function populateStartWord() {
+  const sel = document.getElementById('startWord');
+  const interesting = ['candide','il','le','la','les','un','une','de','rien','tout'];
+  const available = interesting.filter(w => model[w]);
+  const rest = Object.keys(model).sort().filter(w => !available.includes(w));
+  const words = [...available, ...rest];
+  sel.innerHTML = words.map(w => `<option value="${w}">${w}</option>`).join('');
+}
+
+document.getElementById('tempSlider').addEventListener('input', function() {
+  const val = (parseInt(this.value)/10).toFixed(1);
+  document.getElementById('tempVal').textContent = val;
+});
+
+function sampleFromProbs(probs) {
+  const r = Math.random();
+  let cum = 0;
+  for (const p of probs) {
+    cum += p.prob;
+    if (r <= cum) return p.word;
+  }
+  return probs[probs.length-1].word;
+}
+
+function generateText() {
+  const start = document.getElementById('startWord').value;
+  const temp = parseInt(document.getElementById('tempSlider').value)/10;
+  const maxLen = 24;
+  const words = [start];
+  let current = start;
+  let lastProbs = null;
+  for (let i = 0; i < maxLen; i++) {
+    const probs = getProbs(current, temp);
+    if (!probs.length) break;
+    lastProbs = probs;
+    const next = sampleFromProbs(probs);
+    words.push(next);
+    current = next;
+  }
+  const container = document.getElementById('generatedOut');
+  container.innerHTML = words.map((w,i) =>
+    `<span class="gen-word${i===words.length-1?' new':''}">${w} </span>`
+  ).join('');
+
+  if (lastProbs) {
+    const top = lastProbs.slice(0,5);
+    document.getElementById('generatedProbs').innerHTML =
+      `<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;">Dernier choix (après "<b style='color:var(--color-text-primary)'>${words[words.length-2]||''}</b>") :</div>` +
+      top.map(p => `
+        <div class="prob-bar-wrap">
+          <span class="prob-label" style="font-size:12px;">${p.word}</span>
+          <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${(p.prob*100).toFixed(1)}%"></div></div>
+          <span class="prob-val">${(p.prob*100).toFixed(0)}%</span>
+        </div>`).join('');
+  }
+}
+
+document.querySelectorAll('.step-pill').forEach(pill => {
+  pill.addEventListener('click', function() {
+    const step = parseInt(this.dataset.step);
+    document.querySelectorAll('.step-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('panel'+step).classList.add('active');
+  });
+});
+
+CORPORA.candide.text = document.getElementById('corpusInput').value;
+buildModel();
+</script>
+
+</template>
+<template data-widget="1">
+
+<style>
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  .step-pill{padding:5px 14px;font-size:13px;border-radius:99px;border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-background-secondary);color:var(--color-text-secondary)}
+  .step-pill.active{background:#3C3489;color:#EEEDFE;border-color:#3C3489}
+  .panel{display:none}.panel.active{display:block}
+  .info-box{font-size:13px;color:var(--color-text-secondary);border-left:2px solid #7F77DD;padding:8px 12px;margin:.75rem 0 1rem;line-height:1.6;background:var(--color-background-secondary);border-radius:0 var(--border-radius-md) var(--border-radius-md) 0}
+  .word-dot{cursor:pointer}
+  .word-dot circle{transition:r .2s, fill .2s}
+  .word-dot:hover circle{r:10}
+  @keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(2px,-2px)}100%{transform:translate(0,0)}}
+</style>
+
+<h2 class="sr-only">Des tokens aux embeddings : comment les mots acquièrent un sens vectoriel</h2>
+
+<div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+  <div class="step-pill active" data-step="0">1 — Tokens bruts</div>
+  <div class="step-pill" data-step="1">2 — Vecteurs aléatoires</div>
+  <div class="step-pill" data-step="2">3 — Après entraînement</div>
+  <div class="step-pill" data-step="3">4 — La géométrie du sens</div>
+</div>
+
+<div class="panel active" id="panel0">
+  <div class="info-box">Au départ, chaque mot est un identifiant arbitraire dans un dictionnaire. "Chat" = token #9876. Aucune relation, aucun sens — juste un numéro.</div>
+  <svg width="100%" viewBox="0 0 680 220" role="img">
+    <title>Tokens bruts : des identifiants sans signification</title>
+    <desc>Chaque mot est réduit à un numéro d'index dans le vocabulaire.</desc>
+    <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+    <g class="c-gray"><rect x="40" y="30" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="84" y="48" text-anchor="middle" dominant-baseline="central">chat</text></g>
+    <g class="c-gray"><rect x="150" y="30" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="194" y="48" text-anchor="middle" dominant-baseline="central">chien</text></g>
+    <g class="c-gray"><rect x="260" y="30" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="304" y="48" text-anchor="middle" dominant-baseline="central">voiture</text></g>
+    <g class="c-gray"><rect x="370" y="30" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="414" y="48" text-anchor="middle" dominant-baseline="central">avion</text></g>
+    <g class="c-gray"><rect x="480" y="30" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="524" y="48" text-anchor="middle" dominant-baseline="central">Paris</text></g>
+
+    <line x1="84" y1="66" x2="84" y2="100" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a)" fill="none"/>
+    <line x1="194" y1="66" x2="194" y2="100" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a)" fill="none"/>
+    <line x1="304" y1="66" x2="304" y2="100" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a)" fill="none"/>
+    <line x1="414" y1="66" x2="414" y2="100" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a)" fill="none"/>
+    <line x1="524" y1="66" x2="524" y2="100" stroke="var(--color-border-secondary)" stroke-width="1" marker-end="url(#a)" fill="none"/>
+
+    <g class="c-gray"><rect x="40" y="100" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="84" y="118" text-anchor="middle" dominant-baseline="central">#9876</text></g>
+    <g class="c-gray"><rect x="150" y="100" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="194" y="118" text-anchor="middle" dominant-baseline="central">#4201</text></g>
+    <g class="c-gray"><rect x="260" y="100" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="304" y="118" text-anchor="middle" dominant-baseline="central">#7533</text></g>
+    <g class="c-gray"><rect x="370" y="100" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="414" y="118" text-anchor="middle" dominant-baseline="central">#1122</text></g>
+    <g class="c-gray"><rect x="480" y="100" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="ts" x="524" y="118" text-anchor="middle" dominant-baseline="central">#5509</text></g>
+
+    <text class="ts" x="340" y="175" text-anchor="middle">Distance entre chat (#9876) et chien (#4201) : |9876 − 4201| = 5675</text>
+    <text class="ts" x="340" y="195" text-anchor="middle">Distance entre chat (#9876) et voiture (#7533) : |9876 − 7533| = 2343</text>
+    <text class="ts" x="340" y="215" text-anchor="middle" fill="#E24B4A">→ voiture serait plus "proche" de chat que chien. Incohérent.</text>
+  </svg>
+</div>
+
+<div class="panel" id="panel1">
+  <div class="info-box">On remplace chaque token par un vecteur de N nombres (ici N=3 pour simplifier, en réalité N=768 à 4096). Au départ : valeurs aléatoires. Aucun sens géométrique.</div>
+  <svg width="100%" viewBox="0 0 680 260" role="img">
+    <title>Vecteurs aléatoires initiaux avant entraînement</title>
+    <desc>Chaque mot est représenté par un vecteur de trois nombres aléatoires, sans structure sémantique.</desc>
+
+    <g class="c-purple"><rect x="60" y="20" width="80" height="36" rx="6" stroke-width="0.5"/>
+      <text class="th" x="100" y="38" text-anchor="middle" dominant-baseline="central">chat</text></g>
+    <g class="c-purple"><rect x="200" y="20" width="80" height="36" rx="6" stroke-width="0.5"/>
+      <text class="th" x="240" y="38" text-anchor="middle" dominant-baseline="central">chien</text></g>
+    <g class="c-purple"><rect x="340" y="20" width="88" height="36" rx="6" stroke-width="0.5"/>
+      <text class="th" x="384" y="38" text-anchor="middle" dominant-baseline="central">voiture</text></g>
+    <g class="c-purple"><rect x="490" y="20" width="80" height="36" rx="6" stroke-width="0.5"/>
+      <text class="th" x="530" y="38" text-anchor="middle" dominant-baseline="central">avion</text></g>
+
+    <text class="ts" x="100" y="75" text-anchor="middle">[0.83,</text>
+    <text class="ts" x="100" y="91" text-anchor="middle">−0.12,</text>
+    <text class="ts" x="100" y="107" text-anchor="middle">0.47]</text>
+
+    <text class="ts" x="240" y="75" text-anchor="middle">[0.21,</text>
+    <text class="ts" x="240" y="91" text-anchor="middle">0.67,</text>
+    <text class="ts" x="240" y="107" text-anchor="middle">−0.55]</text>
+
+    <text class="ts" x="384" y="75" text-anchor="middle">[−0.44,</text>
+    <text class="ts" x="384" y="91" text-anchor="middle">0.09,</text>
+    <text class="ts" x="384" y="107" text-anchor="middle">0.72]</text>
+
+    <text class="ts" x="530" y="75" text-anchor="middle">[0.61,</text>
+    <text class="ts" x="530" y="91" text-anchor="middle">−0.38,</text>
+    <text class="ts" x="530" y="107" text-anchor="middle">0.14]</text>
+
+    <text class="ts" x="340" y="145" text-anchor="middle" fill="var(--color-text-secondary)">Visualisation dans l'espace 3D (projection 2D)</text>
+
+    <circle cx="160" cy="205" r="7" fill="#7F77DD" opacity="0.8"/>
+    <text class="ts" x="172" y="209">chat</text>
+    <circle cx="420" cy="175" r="7" fill="#7F77DD" opacity="0.8"/>
+    <text class="ts" x="432" y="179">chien</text>
+    <circle cx="280" cy="230" r="7" fill="#7F77DD" opacity="0.8"/>
+    <text class="ts" x="292" y="234">voiture</text>
+    <circle cx="500" cy="215" r="7" fill="#7F77DD" opacity="0.8"/>
+    <text class="ts" x="512" y="219">avion</text>
+    <circle cx="90" cy="190" r="7" fill="#7F77DD" opacity="0.8"/>
+    <text class="ts" x="102" y="194">Paris</text>
+
+    <text class="ts" x="340" y="258" text-anchor="middle">Disposition chaotique — aucune structure sémantique</text>
+  </svg>
+</div>
+
+<div class="panel" id="panel2">
+  <div class="info-box">Après entraînement sur des milliards de phrases, les vecteurs se sont réorganisés. Les mots qui apparaissent dans les mêmes contextes se sont rapprochés. Clique sur un mot pour voir ses voisins.</div>
+
+  <svg width="100%" viewBox="0 0 680 310" role="img" id="embSvg">
+    <title>Espace des embeddings après entraînement</title>
+    <desc>Les mots sémantiquement proches sont regroupés en clusters dans l'espace vectoriel.</desc>
+    <defs>
+      <marker id="ae" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    </defs>
+
+    <text class="ts" x="160" y="22" text-anchor="middle" fill="#3C3489">animaux</text>
+    <ellipse cx="160" cy="110" rx="100" ry="80" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5" opacity="0.5"/>
+
+    <text class="ts" x="420" y="22" text-anchor="middle" fill="#0F6E56">véhicules</text>
+    <ellipse cx="420" cy="110" rx="110" ry="80" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5" opacity="0.5"/>
+
+    <text class="ts" x="580" y="220" text-anchor="middle" fill="#854F0B">lieux</text>
+    <ellipse cx="575" cy="258" rx="80" ry="42" fill="#FAEEDA" stroke="#EF9F27" stroke-width="0.5" opacity="0.5"/>
+
+    <g id="embDots"></g>
+    <g id="embLines"></g>
+    <div id="embCaption"></div>
+  </svg>
+  <div id="embCaption" style="font-size:13px;color:var(--color-text-secondary);min-height:20px;margin-top:4px;"></div>
+</div>
+
+<div class="panel" id="panel3">
+  <div class="info-box">La propriété la plus étonnante : la géométrie encode des relations. Roi − Homme + Femme ≈ Reine. Ce n'est pas programmé — ça émerge de l'entraînement.</div>
+  <svg width="100%" viewBox="0 0 680 310" role="img">
+    <title>Analogies vectorielles : roi - homme + femme = reine</title>
+    <desc>Illustration de la propriété d'analogie des embeddings : des vecteurs parallèles encodent des relations sémantiques.</desc>
+    <defs><marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+    <circle cx="160" cy="220" r="8" fill="#7F77DD"/>
+    <text class="th" x="145" y="248" text-anchor="middle">homme</text>
+
+    <circle cx="280" cy="100" r="8" fill="#7F77DD"/>
+    <text class="th" x="280" y="82" text-anchor="middle">roi</text>
+
+    <circle cx="420" cy="220" r="8" fill="#D4537E"/>
+    <text class="th" x="420" y="248" text-anchor="middle">femme</text>
+
+    <circle cx="540" cy="100" r="10" fill="#D4537E" stroke="#993556" stroke-width="1.5"/>
+    <text class="th" x="540" y="82" text-anchor="middle">reine</text>
+
+    <path d="M 168 214 L 272 106" fill="none" stroke="#7F77DD" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ag)"/>
+    <text class="ts" x="196" y="152" text-anchor="middle" fill="#534AB7">+ royauté</text>
+
+    <path d="M 428 214 L 532 106" fill="none" stroke="#D4537E" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ag)"/>
+    <text class="ts" x="504" y="152" text-anchor="middle" fill="#993556">+ royauté</text>
+
+    <path d="M 168 220 L 412 220" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ag)"/>
+    <text class="ts" x="290" y="238" text-anchor="middle">+ genre féminin</text>
+
+    <path d="M 288 100 L 532 100" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ag)"/>
+    <text class="ts" x="410" y="92" text-anchor="middle">+ genre féminin</text>
+
+    <rect x="130" y="268" width="420" height="36" rx="6" fill="var(--color-background-secondary)" stroke="var(--color-border-tertiary)" stroke-width="0.5"/>
+    <text class="ts" x="340" y="280" text-anchor="middle">roi − homme + femme ≈ reine</text>
+    <text class="ts" x="340" y="296" text-anchor="middle">les vecteurs parallèles encodent la même relation</text>
+  </svg>
+</div>
+
+<script>
+const EMB_WORDS = [
+  {w:'chat',    x:110, y:100, cat:'animal'},
+  {w:'chien',   x:175, y:75,  cat:'animal'},
+  {w:'cheval',  x:140, y:148, cat:'animal'},
+  {w:'oiseau',  x:205, y:120, cat:'animal'},
+  {w:'voiture', x:360, y:80,  cat:'vehicule'},
+  {w:'avion',   x:450, y:60,  cat:'vehicule'},
+  {w:'train',   x:400, y:140, cat:'vehicule'},
+  {w:'bateau',  x:480, y:120, cat:'vehicule'},
+  {w:'Paris',   x:530, y:250, cat:'lieu'},
+  {w:'Londres', x:600, y:265, cat:'lieu'},
+  {w:'Rome',    x:555, y:282, cat:'lieu'},
+];
+
+const CAT_COLORS = {
+  animal:   {fill:'#7F77DD', text:'#3C3489'},
+  vehicule: {fill:'#1D9E75', text:'#085041'},
+  lieu:     {fill:'#BA7517', text:'#633806'},
+};
+
+let selEmbWord = null;
+
+function dist(a,b){ return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2); }
+
+function buildEmbDots(){
+  const g = document.getElementById('embDots');
+  if(!g) return;
+  g.innerHTML='';
+  EMB_WORDS.forEach((d,i)=>{
+    const c = CAT_COLORS[d.cat];
+    const grp = document.createElementNS('http://www.w3.org/2000/svg','g');
+    grp.setAttribute('class','word-dot');
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx', d.x);
+    circle.setAttribute('cy', d.y);
+    circle.setAttribute('r','7');
+    circle.setAttribute('fill', c.fill);
+    circle.setAttribute('opacity','0.9');
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x', d.x+11);
+    txt.setAttribute('y', d.y+4);
+    txt.setAttribute('class','ts');
+    txt.setAttribute('fill', c.text);
+    txt.textContent = d.w;
+    grp.appendChild(circle);
+    grp.appendChild(txt);
+    grp.addEventListener('click', ()=>selectEmbWord(i));
+    g.appendChild(grp);
+  });
+}
+
+function selectEmbWord(idx){
+  selEmbWord = idx;
+  const linesG = document.getElementById('embLines');
+  linesG.innerHTML='';
+  const src = EMB_WORDS[idx];
+  const dists = EMB_WORDS.map((d,i)=>({i, d:dist(src,d)})).filter(x=>x.i!==idx).sort((a,b)=>a.d-b.d);
+  const top3 = dists.slice(0,3);
+  top3.forEach(({i,d})=>{
+    const tgt = EMB_WORDS[i];
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', src.x);
+    line.setAttribute('y1', src.y);
+    line.setAttribute('x2', tgt.x);
+    line.setAttribute('y2', tgt.y);
+    line.setAttribute('stroke','#7F77DD');
+    line.setAttribute('stroke-width', '1');
+    line.setAttribute('opacity','0.5');
+    line.setAttribute('stroke-dasharray','3 2');
+    linesG.appendChild(line);
+  });
+  const dotsG = document.getElementById('embDots');
+  Array.from(dotsG.children).forEach((grp,i)=>{
+    const c = grp.querySelector('circle');
+    const isTop = top3.some(x=>x.i===i);
+    c.setAttribute('r', i===idx ? '10' : (isTop?'8':'7'));
+    c.setAttribute('opacity', i===idx||isTop ? '1' : '0.4');
+  });
+  const caption = document.getElementById('embCaption');
+  const neighbors = top3.map(x=>'"'+EMB_WORDS[x.i].w+'"').join(', ');
+  caption.textContent = `"${src.w}" — voisins les plus proches : ${neighbors}`;
+}
+
+document.querySelectorAll('[data-step]').forEach(pill=>{
+  pill.addEventListener('click',function(){
+    const step = parseInt(this.dataset.step);
+    document.querySelectorAll('[data-step]').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('panel'+step).classList.add('active');
+    if(step===2){ buildEmbDots(); selectEmbWord(0); }
+  });
+});
+
+buildEmbDots();
+selectEmbWord(0);
+</script>
+
+</template>
+<template data-widget="2">
+
+<style>
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.preset-btn{padding:5px 12px;font-size:12px;cursor:pointer;border-radius:99px;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-secondary);white-space:nowrap}
+.preset-btn:hover{background:var(--color-background-primary);color:var(--color-text-primary)}
+.preset-btn.active{background:#3C3489;color:#EEEDFE;border-color:#3C3489}
+.sel-row{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.sel-label{font-size:13px;color:var(--color-text-secondary);min-width:24px}
+.op-badge{font-size:16px;font-weight:500;color:var(--color-text-secondary);min-width:18px;text-align:center}
+.result-box{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:12px 16px;margin-top:12px;font-size:14px;color:var(--color-text-primary)}
+.result-word{font-size:22px;font-weight:500;color:#3C3489}
+.sim-bar-wrap{display:flex;align-items:center;gap:8px;margin:3px 0}
+.sim-label{font-size:12px;font-family:var(--font-mono);min-width:72px;color:var(--color-text-primary)}
+.sim-bg{flex:1;height:14px;background:var(--color-background-primary);border-radius:3px;overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
+.sim-fill{height:100%;background:#7F77DD;border-radius:3px;transition:width .4s}
+.sim-val{font-size:11px;min-width:32px;text-align:right;color:var(--color-text-secondary)}
+</style>
+
+<h2 class="sr-only">Démo interactive d'analogies vectorielles : A − B + C = ?</h2>
+
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
+  <button class="preset-btn active" onclick="loadPreset(0)">roi − homme + femme</button>
+  <button class="preset-btn" onclick="loadPreset(1)">Paris − France + Italie</button>
+  <button class="preset-btn" onclick="loadPreset(2)">chien − animal + végétal</button>
+  <button class="preset-btn" onclick="loadPreset(3)">chaud − été + hiver</button>
+  <button class="preset-btn" onclick="loadPreset(4)">nageur − nager + courir</button>
+</div>
+
+<div class="sel-row">
+  <span class="sel-label">A</span>
+  <select id="selA" style="font-size:13px;padding:5px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)"></select>
+  <span class="op-badge">−</span>
+  <select id="selB" style="font-size:13px;padding:5px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)"></select>
+  <span class="op-badge">+</span>
+  <select id="selC" style="font-size:13px;padding:5px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)"></select>
+  <button onclick="compute()" style="padding:6px 16px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:#3C3489;color:#EEEDFE">= ?</button>
+</div>
+
+<div id="resultBox" class="result-box" style="display:none"></div>
+
+<div style="margin-top:16px;position:relative;width:100%;height:380px">
+  <canvas id="spaceChart" role="img" aria-label="Espace vectoriel 2D montrant la position des mots et la construction de l'analogie">Visualisation de l'espace des embeddings.</canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const WORDS = {
+  roi:     [ 0.85,  0.90],
+  reine:   [ 0.82,  0.45],
+  homme:   [ 0.20,  0.85],
+  femme:   [ 0.18,  0.42],
+  prince:  [ 0.65,  0.88],
+  princesse:[ 0.62, 0.46],
+  Paris:   [-0.80,  0.75],
+  Rome:    [-0.82,  0.30],
+  Berlin:  [-0.84, -0.10],
+  France:  [-0.20,  0.78],
+  Italie:  [-0.22,  0.32],
+  Allemagne:[-0.24,-0.08],
+  chien:   [ 0.10, -0.60],
+  chat:    [ 0.05, -0.75],
+  rose:    [-0.10, -0.62],
+  tulipe:  [-0.15, -0.78],
+  animal:  [ 0.30, -0.50],
+  végétal: [-0.28, -0.55],
+  été:     [ 0.60, -0.20],
+  hiver:   [ 0.60, -0.70],
+  chaud:   [ 0.75, -0.22],
+  froid:   [ 0.75, -0.72],
+  nageur:  [ 0.40,  0.20],
+  coureur: [ 0.38, -0.15],
+  nager:   [ 0.55,  0.25],
+  courir:  [ 0.53, -0.12],
+};
+
+const PRESETS = [
+  {a:'roi',   b:'homme',  c:'femme',   expect:'reine'},
+  {a:'Paris', b:'France', c:'Italie',  expect:'Rome'},
+  {a:'chien', b:'animal', c:'végétal', expect:'rose'},
+  {a:'chaud', b:'été',    c:'hiver',   expect:'froid'},
+  {a:'nageur',b:'nager',  c:'courir',  expect:'coureur'},
+];
+
+const CAT_COLORS = {
+  royauté:  {dot:'#7F77DD', label:'#3C3489'},
+  lieux:    {dot:'#1D9E75', label:'#085041'},
+  nature:   {dot:'#D85A30', label:'#712B13'},
+  saisons:  {dot:'#BA7517', label:'#633806'},
+  actions:  {dot:'#378ADD', label:'#0C447C'},
+};
+const WORD_CATS = {
+  roi:'royauté',reine:'royauté',homme:'royauté',femme:'royauté',prince:'royauté',princesse:'royauté',
+  Paris:'lieux',Rome:'lieux',Berlin:'lieux',France:'lieux',Italie:'lieux',Allemagne:'lieux',
+  chien:'nature',chat:'nature',rose:'nature',tulipe:'nature',animal:'nature',végétal:'nature',
+  été:'saisons',hiver:'saisons',chaud:'saisons',froid:'saisons',
+  nageur:'actions',coureur:'actions',nager:'actions',courir:'actions',
+};
+
+const allWords = Object.keys(WORDS);
+
+function fillSelects(){
+  ['selA','selB','selC'].forEach(id=>{
+    const sel = document.getElementById(id);
+    sel.innerHTML = allWords.map(w=>`<option value="${w}">${w}</option>`).join('');
+  });
+}
+
+function cosSim(a,b){
+  const dot = a[0]*b[0]+a[1]*b[1];
+  const na = Math.sqrt(a[0]**2+a[1]**2);
+  const nb = Math.sqrt(b[0]**2+b[1]**2);
+  return dot/(na*nb);
+}
+
+function vecAdd(a,b){return [a[0]+b[0],a[1]+b[1]];}
+function vecSub(a,b){return [a[0]-b[0],a[1]-b[1]];}
+
+let chart = null;
+let currentA='roi', currentB='homme', currentC='femme';
+
+function compute(){
+  currentA = document.getElementById('selA').value;
+  currentB = document.getElementById('selB').value;
+  currentC = document.getElementById('selC').value;
+
+  const va=WORDS[currentA], vb=WORDS[currentB], vc=WORDS[currentC];
+  const target = vecAdd(vecSub(va,vb),vc);
+
+  const exclude = new Set([currentA,currentB,currentC]);
+  const ranked = allWords
+    .filter(w=>!exclude.has(w))
+    .map(w=>({w, sim: cosSim(target, WORDS[w])}))
+    .sort((a,b)=>b.sim-a.sim);
+
+  const best = ranked[0];
+  const top5 = ranked.slice(0,5);
+
+  const barsHtml = top5.map(r=>`
+    <div class="sim-bar-wrap">
+      <span class="sim-label">${r.w}</span>
+      <div class="sim-bg"><div class="sim-fill" style="width:${Math.max(0,(r.sim*100)).toFixed(1)}%"></div></div>
+      <span class="sim-val">${(r.sim*100).toFixed(0)}%</span>
+    </div>`).join('');
+
+  document.getElementById('resultBox').style.display='block';
+  document.getElementById('resultBox').innerHTML=`
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
+      <span style="font-size:14px;color:var(--color-text-secondary)">${currentA} − ${currentB} + ${currentC} ≈</span>
+      <span class="result-word">${best.w}</span>
+      <span style="font-size:13px;color:var(--color-text-secondary)">(similarité ${(best.sim*100).toFixed(0)}%)</span>
+    </div>
+    <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px">Top 5 mots les plus proches du vecteur cible :</div>
+    ${barsHtml}`;
+
+  drawChart(target, best.w);
+}
+
+function drawChart(target, bestWord){
+  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridCol = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const tickCol = isDark ? '#888780' : '#5F5E5A';
+
+  const basePoints = allWords.map(w=>{
+    const cat = WORD_CATS[w]||'nature';
+    const cc = CAT_COLORS[cat];
+    const isA=(w===currentA), isB=(w===currentB), isC=(w===currentC);
+    const isResult=(w===bestWord);
+    return {
+      x: WORDS[w][0], y: WORDS[w][1],
+      label: w,
+      isA, isB, isC, isResult,
+      bgColor: isA?'#FAC775':isB?'#F0997B':isC?'#9FE1CB':isResult?'#CECBF6':cc.dot+'99',
+      borderColor: isA?'#BA7517':isB?'#993C1D':isC?'#0F6E56':isResult?'#534AB7':cc.dot,
+      radius: (isA||isB||isC||isResult)?9:5,
+      borderWidth: (isA||isB||isC||isResult)?2:1,
+    };
+  });
+
+  const targetPoint = {x:target[0], y:target[1]};
+
+  if(chart){ chart.destroy(); chart=null; }
+
+  const ctx = document.getElementById('spaceChart').getContext('2d');
+
+  const annotation = {
+    type:'line',
+    xMin: WORDS[currentA][0], yMin: WORDS[currentA][1],
+    xMax: targetPoint.x, yMax: targetPoint.y,
+    borderColor:'rgba(127,119,221,0.4)',
+    borderWidth:1.5,
+    borderDash:[4,3],
+  };
+
+  chart = new Chart(ctx,{
+    type:'scatter',
+    data:{
+      datasets:[
+        {
+          label:'mots',
+          data: basePoints.map(p=>({x:p.x,y:p.y,label:p.label})),
+          pointBackgroundColor: basePoints.map(p=>p.bgColor),
+          pointBorderColor: basePoints.map(p=>p.borderColor),
+          pointRadius: basePoints.map(p=>p.radius),
+          pointHoverRadius: basePoints.map(p=>p.radius+2),
+          pointBorderWidth: basePoints.map(p=>p.borderWidth),
+        },
+        {
+          label:'vecteur cible',
+          data:[{x:targetPoint.x, y:targetPoint.y, label:'cible'}],
+          pointBackgroundColor:'rgba(127,119,221,0.15)',
+          pointBorderColor:'#534AB7',
+          pointRadius:13,
+          pointBorderWidth:1.5,
+          pointStyle:'crossRot',
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label(ctx){
+              const d=ctx.raw;
+              return d.label || 'cible';
+            }
+          }
+        }
+      },
+      scales:{
+        x:{min:-1.2,max:1.2,grid:{color:gridCol},ticks:{color:tickCol,font:{size:11}},title:{display:false}},
+        y:{min:-1.1,max:1.1,grid:{color:gridCol},ticks:{color:tickCol,font:{size:11}},title:{display:false}},
+      }
+    },
+    plugins:[{
+      id:'wordLabels',
+      afterDatasetsDraw(chart){
+        const {ctx} = chart;
+        const meta = chart.getDatasetMeta(0);
+        ctx.save();
+        ctx.font='12px sans-serif';
+        meta.data.forEach((pt,i)=>{
+          const d = basePoints[i];
+          const isKey = d.isA||d.isB||d.isC||d.isResult;
+          ctx.fillStyle = isKey
+            ? (d.isA?'#633806':d.isB?'#712B13':d.isC?'#085041':'#3C3489')
+            : (isDark?'#B4B2A9':'#5F5E5A');
+          ctx.font = isKey ? '500 12px sans-serif' : '12px sans-serif';
+          ctx.fillText(d.label, pt.x+10, pt.y-4);
+        });
+        const tMeta = chart.getDatasetMeta(1);
+        if(tMeta.data[0]){
+          const tp = tMeta.data[0];
+          ctx.fillStyle='#534AB7';
+          ctx.font='500 12px sans-serif';
+          ctx.fillText('cible calculée', tp.x+14, tp.y-4);
+        }
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function loadPreset(idx){
+  document.querySelectorAll('.preset-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  const p=PRESETS[idx];
+  document.getElementById('selA').value=p.a;
+  document.getElementById('selB').value=p.b;
+  document.getElementById('selC').value=p.c;
+  compute();
+}
+
+fillSelects();
+loadPreset(0);
+</script>
+
+</template>
+<template data-widget="3">
+
+<style>
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  .token-box{cursor:pointer;transition:opacity .15s}
+  .token-box rect{transition:fill .2s,stroke .2s,stroke-width .2s}
+  .token-box:hover rect{stroke-width:1.5px}
+  .att-line{transition:opacity .3s,stroke-width .3s}
+  .step-pill{padding:5px 14px;font-size:13px;border-radius:99px;border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-background-secondary);color:var(--color-text-secondary)}
+  .step-pill.active{background:#3C3489;color:#EEEDFE;border-color:#3C3489}
+  .panel{display:none}.panel.active{display:block}
+  .info-box{font-size:13px;color:var(--color-text-secondary);border-left:2px solid #7F77DD;padding:8px 12px;margin:.75rem 0;line-height:1.6;background:var(--color-background-secondary);border-radius:0 var(--border-radius-md) var(--border-radius-md) 0}
+</style>
+
+<h2 class="sr-only">Mécanisme d'attention : visualisation interactive</h2>
+
+<div style="display:flex;gap:8px;margin-bottom:1.2rem;flex-wrap:wrap">
+  <div class="step-pill active" data-step="0">1 — Le problème</div>
+  <div class="step-pill" data-step="1">2 — L'attention</div>
+  <div class="step-pill" data-step="2">3 — Q / K / V</div>
+  <div class="step-pill" data-step="3">4 — Multi-tête</div>
+</div>
+
+<div class="panel active" id="panel0">
+  <div class="info-box">Le bigramme regarde 1 mot en arrière. Même un trigramme ne voit que 3 mots. Mais certains liens sautent des dizaines de mots. Le mot "il" ci-dessous : de qui parle-t-on ?</div>
+  <svg width="100%" viewBox="0 0 900 200" role="img">
+    <title>Limite du bigramme : résolution de coréférence</title>
+    <desc>La phrase montre que le mot 'il' est relié à 'Candide' loin en arrière, ce qu'un bigramme ne peut pas capter.</desc>
+    <defs><marker id="a0" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+    <g id="bigramTokens"></g>
+    <path id="bigramArrow" d="" fill="none" stroke="#E24B4A" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a0)" opacity="0"/>
+    <text id="bigramLabel" class="ts" x="340" y="190" text-anchor="middle" opacity="0"></text>
+  </svg>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <button style="padding:6px 16px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)" onclick="showBigramLimit()">Montrer la limite →</button>
+    <button style="padding:6px 16px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)" onclick="resetBigram()">Réinitialiser</button>
+  </div>
+</div>
+
+<div class="panel" id="panel1">
+  <div class="info-box">Clique sur n'importe quel mot (le token "requête"). Le mécanisme d'attention calcule un score de pertinence avec chaque autre mot du contexte. L'épaisseur du trait = le poids d'attention.</div>
+  <svg width="100%" viewBox="0 0 680 260" role="img" id="attSvg">
+    <title>Mécanisme d'attention : clique sur un token pour voir ses poids</title>
+    <desc>Chaque token est cliquable. Les lignes montrent l'intensité de l'attention vers chaque autre token.</desc>
+    <defs><marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+    <g id="attLines"></g>
+    <g id="attTokens"></g>
+  </svg>
+  <div id="attCaption" style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;min-height:20px;"></div>
+</div>
+
+<div class="panel" id="panel2">
+  <div class="info-box">Pour calculer un poids d'attention, chaque token joue trois rôles à la fois : Requête (ce que je cherche), Clé (ce que je suis), Valeur (ce que je transmets).</div>
+  <svg width="100%" viewBox="0 0 680 300" role="img">
+    <title>Q K V : les trois rôles de chaque token dans l'attention</title>
+    <desc>Illustration des vecteurs Requête, Clé et Valeur pour le token 'chat'.</desc>
+    <defs><marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+    <g class="c-purple"><rect x="270" y="20" width="140" height="44" rx="8" stroke-width="0.5"/><text class="th" x="340" y="44" text-anchor="middle" dominant-baseline="central">le chat mange</text></g>
+    <line x1="340" y1="64" x2="340" y2="92" stroke="#7F77DD" stroke-width="1" marker-end="url(#a2)" fill="none"/>
+    <text class="ts" x="340" y="88" text-anchor="middle" fill="#7F77DD">encodage</text>
+    <g class="c-gray"><rect x="270" y="100" width="140" height="36" rx="6" stroke-width="0.5"/><text class="th" x="340" y="118" text-anchor="middle" dominant-baseline="central">embedding "chat"</text></g>
+    <line x1="270" y1="118" x2="160" y2="160" stroke="#888780" stroke-width="1" marker-end="url(#a2)" fill="none"/>
+    <line x1="340" y1="136" x2="340" y2="160" stroke="#888780" stroke-width="1" marker-end="url(#a2)" fill="none"/>
+    <line x1="410" y1="118" x2="520" y2="160" stroke="#888780" stroke-width="1" marker-end="url(#a2)" fill="none"/>
+    <g class="c-teal"><rect x="80" y="160" width="140" height="56" rx="8" stroke-width="0.5"/>
+      <text class="th" x="150" y="181" text-anchor="middle" dominant-baseline="central">Q — requête</text>
+      <text class="ts" x="150" y="203" text-anchor="middle" dominant-baseline="central">ce que je cherche</text></g>
+    <g class="c-coral"><rect x="270" y="160" width="140" height="56" rx="8" stroke-width="0.5"/>
+      <text class="th" x="340" y="181" text-anchor="middle" dominant-baseline="central">K — clé</text>
+      <text class="ts" x="340" y="203" text-anchor="middle" dominant-baseline="central">ce que je suis</text></g>
+    <g class="c-purple"><rect x="460" y="160" width="140" height="56" rx="8" stroke-width="0.5"/>
+      <text class="th" x="530" y="181" text-anchor="middle" dominant-baseline="central">V — valeur</text>
+      <text class="ts" x="530" y="203" text-anchor="middle" dominant-baseline="central">ce que je transmets</text></g>
+    <line x1="150" y1="216" x2="280" y2="260" stroke="#1D9E75" stroke-width="1" marker-end="url(#a2)" fill="none"/>
+    <line x1="340" y1="216" x2="340" y2="260" stroke="#993C1D" stroke-width="1" marker-end="url(#a2)" fill="none"/>
+    <text class="ts" x="340" y="278" text-anchor="middle">score Q·K = poids d'attention → pondère les V → nouvelle représentation</text>
+  </svg>
+</div>
+
+<div class="panel" id="panel3">
+  <div class="info-box">Un seul mécanisme d'attention capte un seul type de relation. Le transformer en lance plusieurs en parallèle ("têtes"), chacune spécialisée sur un aspect différent.</div>
+  <svg width="100%" viewBox="0 0 680 310" role="img">
+    <title>Multi-head attention : plusieurs têtes d'attention en parallèle</title>
+    <desc>Illustration de quatre têtes d'attention, chacune avec un rôle différent.</desc>
+    <defs><marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+    <g class="c-purple"><rect x="240" y="20" width="200" height="40" rx="8" stroke-width="0.5"/><text class="th" x="340" y="40" text-anchor="middle" dominant-baseline="central">token d'entrée</text></g>
+    <line x1="280" y1="60" x2="120" y2="120" stroke="#7F77DD" stroke-width="1" fill="none"/>
+    <line x1="313" y1="60" x2="260" y2="120" stroke="#7F77DD" stroke-width="1" fill="none"/>
+    <line x1="367" y1="60" x2="420" y2="120" stroke="#7F77DD" stroke-width="1" fill="none"/>
+    <line x1="400" y1="60" x2="560" y2="120" stroke="#7F77DD" stroke-width="1" fill="none"/>
+    <g class="c-teal"><rect x="50" y="120" width="130" height="56" rx="8" stroke-width="0.5"/>
+      <text class="th" x="115" y="141" text-anchor="middle" dominant-baseline="central">Tête 1</text>
+      <text class="ts" x="115" y="163" text-anchor="middle" dominant-baseline="central">relations syntaxiques</text></g>
+    <g class="c-coral"><rect x="210" y="120" width="130" height="56" rx="8" stroke-width="0.5"/>
+      <text class="th" x="275" y="141" text-anchor="middle" dominant-baseline="central">Tête 2</text>
+      <text class="ts" x="275" y="163" text-anchor="middle" dominant-baseline="central">coréférences</text></g>
+    <g class="c-amber"><rect x="370" y="120" width="130" height="56" rx="8" stroke-width="0.5"/>
+      <text class="th" x="435" y="141" text-anchor="middle" dominant-baseline="central">Tête 3</text>
+      <text class="ts" x="435" y="163" text-anchor="middle" dominant-baseline="central">relations sémantiques</text></g>
+    <g class="c-purple"><rect x="530" y="120" width="120" height="56" rx="8" stroke-width="0.5"/>
+      <text class="th" x="590" y="141" text-anchor="middle" dominant-baseline="central">Tête 4</text>
+      <text class="ts" x="590" y="163" text-anchor="middle" dominant-baseline="central">position relative</text></g>
+    <line x1="115" y1="176" x2="280" y2="240" stroke="#888780" stroke-width="1" fill="none"/>
+    <line x1="275" y1="176" x2="310" y2="240" stroke="#888780" stroke-width="1" fill="none"/>
+    <line x1="435" y1="176" x2="370" y2="240" stroke="#888780" stroke-width="1" fill="none"/>
+    <line x1="590" y1="176" x2="400" y2="240" stroke="#888780" stroke-width="1" fill="none"/>
+    <g class="c-gray"><rect x="240" y="240" width="200" height="44" rx="8" stroke-width="0.5"/><text class="th" x="340" y="262" text-anchor="middle" dominant-baseline="central">concaténation + projection</text></g>
+    <line x1="340" y1="284" x2="340" y2="305" stroke="#888780" stroke-width="1" marker-end="url(#a3)" fill="none"/>
+    <text class="ts" x="340" y="302" text-anchor="middle">représentation enrichie → couche suivante</text>
+  </svg>
+</div>
+
+<script>
+const SENTENCE = ['Candide','marchait','seul','dans','le','désert','quand','il','aperçut','un','village'];
+const TOKEN_W = 72, TOKEN_H = 36, GAP = 8;
+const totalW = SENTENCE.length * TOKEN_W + (SENTENCE.length-1) * GAP;
+const startX = (900 - totalW) / 2;
+const TOKEN_Y = 80;
+
+function tokenX(i){ return startX + i*(TOKEN_W+GAP); }
+function tokenCX(i){ return tokenX(i)+TOKEN_W/2; }
+
+function buildBigramTokens(){
+  const g = document.getElementById('bigramTokens');
+  if(!g) return;
+  g.innerHTML = '';
+  SENTENCE.forEach((w,i)=>{
+    const isKey = (w==='Candide'||w==='il');
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', tokenX(i));
+    rect.setAttribute('y', TOKEN_Y);
+    rect.setAttribute('width', TOKEN_W);
+    rect.setAttribute('height', TOKEN_H);
+    rect.setAttribute('rx','6');
+    rect.setAttribute('fill', isKey?'#EEEDFE':'var(--color-background-secondary)');
+    rect.setAttribute('stroke', isKey?'#7F77DD':'var(--color-border-secondary)');
+    rect.setAttribute('stroke-width','0.5');
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x', tokenCX(i));
+    txt.setAttribute('y', TOKEN_Y+TOKEN_H/2);
+    txt.setAttribute('text-anchor','middle');
+    txt.setAttribute('dominant-baseline','central');
+    txt.setAttribute('class','ts');
+    txt.setAttribute('fill', isKey?'#3C3489':'var(--color-text-primary)');
+    txt.textContent = w;
+    g.appendChild(rect);
+    g.appendChild(txt);
+  });
+  const ilIdx = SENTENCE.indexOf('il');
+  const bigram = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  bigram.setAttribute('id','bigramWindow');
+  bigram.setAttribute('x', tokenX(ilIdx-1)-3);
+  bigram.setAttribute('y', TOKEN_Y-4);
+  bigram.setAttribute('width', TOKEN_W*2+GAP+6);
+  bigram.setAttribute('height', TOKEN_H+8);
+  bigram.setAttribute('rx','8');
+  bigram.setAttribute('fill','none');
+  bigram.setAttribute('stroke','#E24B4A');
+  bigram.setAttribute('stroke-width','1.5');
+  bigram.setAttribute('stroke-dasharray','4 3');
+  bigram.setAttribute('opacity','0');
+  g.insertBefore(bigram, g.firstChild);
+  const labelT = document.createElementNS('http://www.w3.org/2000/svg','text');
+  labelT.setAttribute('id','bigramWindowLabel');
+  labelT.setAttribute('class','ts');
+  labelT.setAttribute('x', tokenX(ilIdx-1)+TOKEN_W+GAP/2);
+  labelT.setAttribute('y', TOKEN_Y-10);
+  labelT.setAttribute('text-anchor','middle');
+  labelT.setAttribute('fill','#E24B4A');
+  labelT.setAttribute('opacity','0');
+  labelT.textContent = 'fenêtre bigramme';
+  g.appendChild(labelT);
+}
+
+function showBigramLimit(){
+  const ilIdx = SENTENCE.indexOf('il');
+  const candIdx = SENTENCE.indexOf('Candide');
+  const x1=tokenCX(candIdx), y1=TOKEN_Y, x2=tokenCX(ilIdx), y2=TOKEN_Y;
+  const mx=(x1+x2)/2, my=TOKEN_Y-50;
+  const p=document.getElementById('bigramArrow');
+  p.setAttribute('d',`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`);
+  p.setAttribute('opacity','1');
+  const lbl=document.getElementById('bigramLabel');
+  lbl.setAttribute('x',mx);
+  lbl.setAttribute('y',my-12);
+  lbl.textContent='Le bigramme ne peut pas faire ce lien !';
+  lbl.setAttribute('fill','#E24B4A');
+  lbl.setAttribute('opacity','1');
+  document.getElementById('bigramWindow').setAttribute('opacity','1');
+  document.getElementById('bigramWindowLabel').setAttribute('opacity','1');
+}
+function resetBigram(){
+  document.getElementById('bigramArrow').setAttribute('opacity','0');
+  document.getElementById('bigramLabel').setAttribute('opacity','0');
+  document.getElementById('bigramWindow').setAttribute('opacity','0');
+  document.getElementById('bigramWindowLabel').setAttribute('opacity','0');
+}
+
+const ATT_WORDS = ['Candide','quittait','le','château','et','il','marchait'];
+const ATT_W=74, ATT_H=38, ATT_GAP=10;
+const attTotal = ATT_WORDS.length*ATT_W + (ATT_WORDS.length-1)*ATT_GAP;
+const attStartX = (680-attTotal)/2;
+const ATT_Y = 180;
+
+const attWeights = {
+  0:[0.05,0.05,0.05,0.2,0.05,0.05,0.55],
+  1:[0.35,0.05,0.1,0.1,0.05,0.1,0.25],
+  2:[0.1,0.05,0.05,0.45,0.05,0.05,0.25],
+  3:[0.35,0.05,0.15,0.05,0.05,0.05,0.30],
+  4:[0.1,0.1,0.1,0.1,0.05,0.25,0.30],
+  5:[0.55,0.05,0.05,0.1,0.05,0.05,0.15],
+  6:[0.4,0.05,0.05,0.2,0.05,0.15,0.10],
+};
+
+function attTokenCX(i){ return attStartX+i*(ATT_W+ATT_GAP)+ATT_W/2; }
+
+let selectedToken = null;
+
+function buildAttTokens(){
+  const g=document.getElementById('attTokens');
+  if(!g)return;
+  g.innerHTML='';
+  ATT_WORDS.forEach((w,i)=>{
+    const grp = document.createElementNS('http://www.w3.org/2000/svg','g');
+    grp.setAttribute('class','token-box');
+    grp.setAttribute('data-idx',i);
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',attStartX+i*(ATT_W+ATT_GAP));
+    rect.setAttribute('y',ATT_Y);
+    rect.setAttribute('width',ATT_W);
+    rect.setAttribute('height',ATT_H);
+    rect.setAttribute('rx','6');
+    rect.setAttribute('fill','var(--color-background-secondary)');
+    rect.setAttribute('stroke','var(--color-border-secondary)');
+    rect.setAttribute('stroke-width','0.5');
+    const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x',attStartX+i*(ATT_W+ATT_GAP)+ATT_W/2);
+    txt.setAttribute('y',ATT_Y+ATT_H/2);
+    txt.setAttribute('text-anchor','middle');
+    txt.setAttribute('dominant-baseline','central');
+    txt.setAttribute('class','ts');
+    txt.textContent=w;
+    grp.appendChild(rect);
+    grp.appendChild(txt);
+    grp.addEventListener('click',()=>selectAttToken(i));
+    g.appendChild(grp);
+  });
+}
+
+function selectAttToken(idx){
+  selectedToken=idx;
+  const linesG=document.getElementById('attLines');
+  linesG.innerHTML='';
+  const weights=attWeights[idx];
+  const qy=ATT_Y;
+  const lineY=ATT_Y-30;
+  ATT_WORDS.forEach((w,i)=>{
+    const w2=weights[i];
+    const x1=attTokenCX(idx);
+    const x2=attTokenCX(i);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','path');
+    const cy=lineY - Math.abs(x2-x1)*0.18;
+    line.setAttribute('d',`M ${x1} ${qy} Q ${(x1+x2)/2} ${cy} ${x2} ${qy}`);
+    line.setAttribute('fill','none');
+    const alpha=Math.round(w2*255).toString(16).padStart(2,'0');
+    line.setAttribute('stroke', i===idx ? '#BA7517' : '#7F77DD');
+    line.setAttribute('stroke-width', i===idx ? 1 : Math.max(0.5, w2*6));
+    line.setAttribute('opacity', i===idx ? 0.3 : Math.max(0.15, w2));
+    line.setAttribute('stroke-linecap','round');
+    linesG.appendChild(line);
+  });
+  document.querySelectorAll('.token-box').forEach((g,i)=>{
+    const rect=g.querySelector('rect');
+    const txt=g.querySelector('text');
+    const isQ=(i===idx);
+    const w2=weights[i];
+    rect.setAttribute('fill', isQ ? '#FAC775' : (w2>0.3?'#EEEDFE':'var(--color-background-secondary)'));
+    rect.setAttribute('stroke', isQ ? '#BA7517' : (w2>0.3?'#7F77DD':'var(--color-border-secondary)'));
+    rect.setAttribute('stroke-width', isQ ? '1.5' : '0.5');
+    txt.setAttribute('fill', isQ ? '#633806' : (w2>0.3?'#3C3489':'var(--color-text-primary)'));
+  });
+  const caption=document.getElementById('attCaption');
+  const topI=weights.reduce((best,v,i)=>v>weights[best]?i:best,idx===0?1:0);
+  caption.textContent=`"${ATT_WORDS[idx]}" regarde surtout "${ATT_WORDS[topI]}" (poids: ${(weights[topI]*100).toFixed(0)}%) — clique sur un autre token pour changer de requête.`;
+}
+
+document.querySelectorAll('[data-step]').forEach(pill=>{
+  pill.addEventListener('click',function(){
+    const step=parseInt(this.dataset.step);
+    document.querySelectorAll('[data-step]').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('panel'+step).classList.add('active');
+  });
+});
+
+buildBigramTokens();
+buildAttTokens();
+selectAttToken(5);
+</script>
+  </template>
+
+  <script>
+  (function(){
+    "use strict";
+
+    var TABS = [
+      {label:"1 · Bigramme",   title:"Modèle bigramme sur Candide"},
+      {label:"2 · Embeddings", title:"Des tokens aux embeddings"},
+      {label:"3 · Analogies",  title:"Analogies vectorielles"},
+      {label:"4 · Attention",  title:"Mécanisme d'attention"}
+    ];
+
+    // --- Design system reconstruit (injecté dans chaque iframe) ---
+    var THEME = '<style>'
+      + ':root{'
+      + '--color-text-primary:#1A1A17;--color-text-secondary:#5F5E5A;--color-text-tertiary:#8B8A83;'
+      + '--color-background-primary:#FFFFFF;--color-background-secondary:#F5F3EE;'
+      + '--color-border-secondary:#D9D6CE;--color-border-tertiary:#E8E5DE;'
+      + '--border-radius-md:8px;--border-radius-lg:12px;'
+      + '--font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;'
+      + '--font-serif:Georgia,"Iowan Old Style","Times New Roman",serif;'
+      + '}'
+      + 'html,body{margin:0;padding:0}'
+      + 'body{padding:6px 4px;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;'
+      + 'color:var(--color-text-primary);background:var(--color-background-primary);font-size:14px;line-height:1.5;'
+      + '-webkit-font-smoothing:antialiased}'
+      + '.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}'
+      + 'h2{font-size:16px;font-weight:600;margin:0 0 .6rem}'
+      + 'input[type=range]{accent-color:#3C3489}'
+      + 'svg{max-width:100%;height:auto}'
+      + '.ts{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;fill:var(--color-text-secondary)}'
+      + '.th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;font-weight:500;fill:var(--color-text-primary)}'
+      + '.c-gray rect{fill:var(--color-background-secondary);stroke:var(--color-border-secondary)}.c-gray text{fill:var(--color-text-primary)}'
+      + '.c-purple rect{fill:#EEEDFE;stroke:#AFA9EC}.c-purple text{fill:#3C3489}'
+      + '.c-teal rect{fill:#E1F5EE;stroke:#5DCAA5}.c-teal text{fill:#085041}'
+      + '.c-coral rect{fill:#FBE3DA;stroke:#C2603C}.c-coral text{fill:#7A2E12}'
+      + '.c-amber rect{fill:#FAEEDA;stroke:#EF9F27}.c-amber text{fill:#633806}'
+      + '</style>';
+
+    // --- Shims hôte (Claude Desktop) + verrouillage thème clair ---
+    var SHIMS = '<scr'+'ipt>'
+      + 'window.sendPrompt=function(){};window.completion=function(){};'
+      + '(function(){var _m=window.matchMedia?window.matchMedia.bind(window):null;'
+      + 'function stub(q){return{matches:false,media:q,onchange:null,'
+      + 'addListener:function(){},removeListener:function(){},'
+      + 'addEventListener:function(){},removeEventListener:function(){},dispatchEvent:function(){return false}};}'
+      + 'window.matchMedia=function(q){if(/prefers-color-scheme/.test(q))return stub(q);return _m?_m(q):stub(q);};'
+      + '})();'
+      + '</scr'+'ipt>';
+
+    // --- Auto-hauteur : l'iframe signale sa hauteur au parent ---
+    var RESIZE = '<scr'+'ipt>'
+      + '(function(){function send(){var h=Math.ceil(document.documentElement.getBoundingClientRect().height);'
+      + 'parent.postMessage({__wh:true,h:h},"*");}'
+      + 'window.addEventListener("load",send);'
+      + 'if(window.ResizeObserver){new ResizeObserver(send).observe(document.body);}'
+      + 'window.addEventListener("resize",send);'
+      + 'document.addEventListener("click",function(){setTimeout(send,50);setTimeout(send,400);},true);'
+      + 'setTimeout(send,80);setTimeout(send,600);})();'
+      + '</scr'+'ipt>';
+
+    function buildDoc(fragment){
+      return '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
+        + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        + THEME + SHIMS + '</head><body>' + fragment + RESIZE + '</body></html>';
+    }
+
+    var tpls   = Array.prototype.slice.call(document.querySelectorAll('template[data-widget]'));
+    var stage  = document.getElementById('stage');
+    var tabsEl = document.getElementById('tabs');
+    var frames = [];
+    var btns   = [];
+    var current = -1;
+
+    function ensureFrame(i){
+      if(frames[i]) return frames[i];
+      var f = document.createElement('iframe');
+      f.className = 'wframe';
+      f.setAttribute('title', TABS[i].title);
+      f.setAttribute('scrolling', 'no');
+      f.style.height = '600px';
+      f.srcdoc = buildDoc(tpls[i].innerHTML);
+      stage.appendChild(f);
+      frames[i] = f;
+      return f;
+    }
+
+    function show(i){
+      if(i === current) return;
+      current = i;
+      btns.forEach(function(b,k){
+        var on = (k===i);
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+        b.setAttribute('tabindex', on ? '0' : '-1');
+      });
+      frames.forEach(function(f){ if(f) f.style.display='none'; });
+      ensureFrame(i).style.display = 'block';
+    }
+
+    TABS.forEach(function(t,i){
+      var b = document.createElement('button');
+      b.className = 'tab';
+      b.type = 'button';
+      b.textContent = t.label;
+      b.setAttribute('role','tab');
+      b.setAttribute('aria-selected','false');
+      b.setAttribute('tabindex','-1');
+      b.addEventListener('click', function(){ show(i); });
+      b.addEventListener('keydown', function(e){
+        if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+          e.preventDefault();
+          var n = (i + (e.key==='ArrowRight'?1:TABS.length-1)) % TABS.length;
+          btns[n].focus(); show(n);
+        }
+      });
+      tabsEl.appendChild(b);
+      btns.push(b);
+    });
+
+    window.addEventListener('message', function(e){
+      var d = e.data;
+      if(!d || d.__wh !== true) return;
+      for(var k=0;k<frames.length;k++){
+        if(frames[k] && frames[k].contentWindow === e.source){
+          frames[k].style.height = Math.max(d.h, 60) + 'px';
+          break;
+        }
+      }
+    });
+
+    show(0);
+  })();
+  </script>
+</body>
+</html>
