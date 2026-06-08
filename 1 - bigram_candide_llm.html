@@ -1,0 +1,305 @@
+
+<style>
+  .section { margin: 1.5rem 0; }
+  .section-title { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+  .corpus-area { width: 100%; box-sizing: border-box; font-size: 13px; font-family: var(--font-mono); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; background: var(--color-background-secondary); color: var(--color-text-primary); resize: vertical; }
+  .btn { padding: 7px 18px; font-size: 14px; cursor: pointer; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+  .btn:hover { background: var(--color-background-secondary); }
+  .btn-primary { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+  .btn-primary:hover { background: #534AB7; }
+  .word-pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 13px; font-family: var(--font-mono); margin: 3px; cursor: pointer; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .word-pill.selected { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+  .prob-bar-wrap { display: flex; align-items: center; gap: 10px; margin: 5px 0; }
+  .prob-label { font-size: 13px; font-family: var(--font-mono); min-width: 100px; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prob-bar-bg { flex: 1; height: 18px; background: var(--color-background-secondary); border-radius: 4px; overflow: hidden; }
+  .prob-bar-fill { height: 100%; background: #7F77DD; border-radius: 4px; transition: width 0.3s; }
+  .prob-val { font-size: 12px; min-width: 38px; text-align: right; color: var(--color-text-secondary); }
+  .generated-text { font-size: 15px; font-family: var(--font-serif); background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px 18px; line-height: 2; min-height: 60px; color: var(--color-text-primary); }
+  .gen-word.new { background: #EEEDFE; border-radius: 3px; padding: 0 2px; color: #3C3489; }
+  .temp-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+  .temp-label { font-size: 13px; color: var(--color-text-secondary); min-width: 90px; }
+  .step-pills { display: flex; gap: 8px; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  .step-pill { padding: 5px 14px; font-size: 13px; border-radius: 99px; border: 0.5px solid var(--color-border-secondary); cursor: pointer; background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .step-pill.active { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .info-box { font-size: 13px; color: var(--color-text-secondary); border-left: 2px solid #7F77DD; padding: 8px 12px; margin: 0.75rem 0; line-height: 1.6; background: var(--color-background-secondary); border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; }
+  .bigram-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: 8px; }
+  .bigram-card { background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 8px 10px; font-size: 12px; font-family: var(--font-mono); }
+  .bigram-pair { font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+  .bigram-count { color: var(--color-text-secondary); }
+  .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 16px; font-size: 13px; }
+  .n-btn { padding: 4px 12px; font-size: 12px; cursor: pointer; border-radius: 99px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text-secondary); margin: 2px; }
+  .n-btn.active { background: #3C3489; color: #EEEDFE; border-color: #3C3489; }
+</style>
+
+<h2 class="sr-only">Démonstration interactive : modèle N-gramme sur Candide de Voltaire</h2>
+
+<div class="step-pills" id="stepPills">
+  <div class="step-pill active" data-step="0">1 — Corpus</div>
+  <div class="step-pill" data-step="1">2 — Bigrammes</div>
+  <div class="step-pill" data-step="2">3 — Prédire</div>
+  <div class="step-pill" data-step="3">4 — Générer</div>
+  <div class="step-pill" data-step="4">5 — Vers les LLMs</div>
+</div>
+
+<div class="panel active" id="panel0">
+  <div class="section">
+    <div class="section-title">Corpus — Candide, Voltaire (1759) — domaine public</div>
+    <div class="info-box">Trois chapitres de Candide. Tu peux modifier le texte ou en coller un autre. Le modèle se reconstruit à chaque analyse.</div>
+    <textarea class="corpus-area" id="corpusInput" rows="8">Il y avait en Vestphalie dans le château de monsieur le baron de Thunder-ten-tronckh un jeune garçon à qui la nature avait donné les mœurs les plus douces. Sa physionomie annonçait son âme. Il avait le jugement assez droit avec l esprit le plus simple. Les anciens domestiques de la maison soupçonnaient qu il était fils de la sœur de monsieur le baron et d un bon et honnête gentilhomme du voisinage. Monsieur le baron était un des plus puissants seigneurs de la Vestphalie car son château avait une porte et des fenêtres. Sa grande salle même était ornée d une tapisserie. Madame la baronne pesait environ trois cent cinquante livres et s attirait par là une très grande considération. Sa fille Cunégonde âgée de dix-sept ans était haute en couleur fraîche grasse appétissante. Le fils du baron paraissait en tout digne de son père. Le précepteur Pangloss était l oracle de la maison. Il enseignait la métaphysico-théologo-cosmolonigologie. Il prouvait admirablement qu il n y a point d effet sans cause. Candide écoutait attentivement et croyait innocemment. Un jour Cunégonde en se promenant près du château vit le docteur Pangloss qui donnait une leçon de physique à la femme de chambre. Cunégonde avait beaucoup de disposition pour les sciences. Elle observa avec attention les expériences réitérées du docteur. Elle rentra tout agitée toute pensive toute remplie du désir d être savante. Le lendemain après le dîner comme on sortait de table Cunégonde et Candide se trouvèrent derrière un paravent. Cunégonde laissa tomber son mouchoir Candide le ramassa elle lui prit innocemment la main. Monsieur le baron passa auprès du paravent et voyant cette cause et cet effet chassa Candide du château à grands coups de pied. Cunégonde s évanouit. Elle fut souffletée par madame la baronne dès qu elle fut revenue à elle-même. Et tout fut consterné dans le plus beau et le plus agréable des châteaux possibles. Candide chassé du paradis terrestre marcha longtemps sans savoir où pleurant levant les yeux au ciel les tournant souvent vers le plus beau des châteaux. Il se coucha sans souper au milieu des champs entre deux sillons. La neige tombait à gros flocons. Candide transi de froid sans souper et sans argent se traînait vers la ville voisine qui s appelait Waldberghoff-trarbk-dikdorff. Il s arrêtait de temps en temps à la porte des cabarets sans oser entrer. Un jour il se présenta deux hommes habillés de bleu. L un d eux dit à Candide voilà un jeune homme bien fait et de la bonne taille. Candide s inclina modestement. On lui demanda s il n avait pas une grande affection pour le roi des Bulgares. Candide répondit qu il n avait point encore eu cet honneur. Il fut aussitôt lié ferré mené dans un régiment. On lui apprit à tourner à droite à gauche à hausser la baguette à remettre la baguette. On lui donna trente coups de bâton. Le lendemain il fit l exercice un peu moins mal et il ne reçut que vingt coups. Le surlendemain on ne lui en donna que dix et il fut regardé par ses camarades comme un prodige. Candide tout stupéfait ne démêlait pas encore trop bien comment il était un héros. Il s avisa un beau jour de printemps de s aller promener faisant un pas devant l autre. Il crut que c était là un privilège de l espèce humaine ainsi que de l espèce animale. Il n avait pas fait deux lieues que voilà quatre autres héros de six pieds qui l atteignirent qui le lièrent qui le menèrent dans un cachot. On lui demanda en justice ce qu il aimait le mieux d être fusillé ou pendu. Il dit que les volontés humaines sont libres et qu il ne voulait ni l un ni l autre. Il fallut faire un choix. Il se détermina en vertu du don de Dieu qu on nomme liberté à passer par les baguettes trente-six fois. Deux mille hommes composaient le régiment. Après la première et la deuxième course il n y en avait déjà plus que deux mille qui lui donnaient chacun deux mille coups de baguette. Le roi des Bulgares passa dans ce moment et s informa du crime du patient. Ce roi avait un grand génie. Il comprit que c était un jeune métaphysicien fort ignorant des choses de ce monde et il lui accorda sa grâce. Un brave chirurgien guérit Candide en trois semaines. Il avait déjà un peu de peau et pouvait marcher quand le roi de Bulgarie livra bataille au roi des Abares. Rien n était si beau si leste si brillant si bien ordonné que les deux armées. Les trompettes les fifres les hautbois les tambours les canons formaient une harmonie telle qu il n y en eut jamais en enfer. Les canons renversèrent d abord à peu près six mille hommes de chaque côté. Les mousqueteries ôtèrent du meilleur des mondes environ neuf à dix mille coquins qui en infectaient la surface. La baïonnette fut aussi la raison suffisante de la mort de quelques milliers d hommes. Le tout pouvait se monter à une trentaine de mille âmes. Candide qui tremblait comme un philosophe se cacha du mieux qu il put pendant cette boucherie héroïque. Enfin tandis que les deux rois faisaient chanter des Te Deum chacun dans son camp Candide prit le parti d aller raisonner ailleurs des effets et des causes. Il passa par-dessus des tas de morts et d agonisants et gagna d abord un village voisin. Il était en cendres car les Bulgares l avaient brûlé selon les lois du droit public. Des vieillards criblés de coups regardaient mourir leurs femmes égorgées qui tenaient leurs enfants à leurs mamelles sanglantes. Des filles éventrées après avoir assouvi les besoins naturels de quelques héros rendaient les derniers soupirs. D autres à demi brûlées criaient qu on achevât de leur donner la mort. Candide s enfuit au plus vite dans un autre village. Il appartenait aux Bulgares et les héros abares l avaient traité de même. Candide toujours marchant sur des membres palpitants ou à travers des ruines arriva enfin hors du théâtre de la guerre portant quelques petites provisions dans son bissac et n oubliant jamais mademoiselle Cunégonde.</textarea>
+    <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+      <button class="btn btn-primary" onclick="buildModel()">Analyser →</button>
+      <span id="buildStatus" style="font-size:13px; color: var(--color-text-secondary);"></span>
+    </div>
+    <div id="statsRow" class="stats-row" style="display:none;">
+      <div class="stat-card"><span style="color:var(--color-text-secondary);">Tokens</span><br><span id="tokenCount" style="font-size:22px;font-weight:500;">0</span></div>
+      <div class="stat-card"><span style="color:var(--color-text-secondary);">Mots distincts</span><br><span id="vocabCount" style="font-size:22px;font-weight:500;">0</span></div>
+      <div class="stat-card"><span style="color:var(--color-text-secondary);">Bigrammes</span><br><span id="bigramCount" style="font-size:22px;font-weight:500;">0</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="panel1">
+  <div class="section">
+    <div class="section-title">Les bigrammes les plus fréquents</div>
+    <div class="info-box">Le modèle a compté toutes les paires de mots consécutifs. C'est l'intégralité de sa "connaissance".</div>
+    <div id="bigramDisplay" class="bigram-grid"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel2">
+  <div class="section">
+    <div class="section-title">Prédire le mot suivant</div>
+    <div class="info-box">Choisis un mot : le modèle affiche la distribution de probabilité des mots qui le suivent dans le corpus.</div>
+    <div id="wordPills" style="margin-bottom: 1rem; max-height: 120px; overflow-y: auto;"></div>
+    <div id="probDisplay"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel3">
+  <div class="section">
+    <div class="section-title">Générer du texte</div>
+    <div class="info-box">À chaque étape, le modèle tire au sort le mot suivant selon les probabilités bigrammes. La température modifie la distribution avant le tirage.</div>
+    <div class="temp-row">
+      <span class="temp-label">Température</span>
+      <input type="range" id="tempSlider" min="1" max="30" value="10" step="1" style="flex:1;">
+      <span id="tempVal" style="font-size:14px;min-width:36px;text-align:right;color:var(--color-text-primary);">1.0</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary);margin:-4px 0 10px 102px;">
+      <span>déterministe</span><span>aléatoire</span>
+    </div>
+    <div style="margin: 8px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span style="font-size:13px;color:var(--color-text-secondary);">Démarrer avec :</span>
+      <select id="startWord" style="font-size:13px;padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);"></select>
+      <button class="btn btn-primary" onclick="generateText()">Générer</button>
+    </div>
+    <div id="generatedOut" class="generated-text" style="min-height:70px;"></div>
+    <div id="generatedProbs" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel4">
+  <div class="section">
+    <div class="section-title">Du bigramme au LLM — ce qui change</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;">
+        <div style="font-weight:500;font-size:14px;margin-bottom:6px;">Bigramme <span style="font-weight:400;color:var(--color-text-secondary);">— ce qu'on vient de faire</span></div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">Regarde 1 mot en arrière. Connaissance = une table de fréquences. Pas de compréhension, juste du comptage.</div>
+      </div>
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;">
+        <div style="font-weight:500;font-size:14px;margin-bottom:6px;">N-gramme <span style="font-weight:400;color:var(--color-text-secondary);">— même idée, plus de mémoire</span></div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">Regarde N mots en arrière. "Candide marcha" → suivant probable : "longtemps". Mais le nombre de combinaisons explose avec N : impossible à l'échelle.</div>
+      </div>
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;border-color:#AFA9EC;">
+        <div style="font-weight:500;font-size:14px;margin-bottom:6px;color:#3C3489;">Réseau de neurones <span style="font-weight:400;color:var(--color-text-secondary);">— même tâche, autre représentation</span></div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">Les mots deviennent des vecteurs (embeddings). Au lieu de compter, on apprend des poids par rétropropagation. La sortie reste une distribution de probabilités sur le vocabulaire.</div>
+      </div>
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;background:var(--color-background-secondary);">
+        <div style="font-weight:500;font-size:14px;margin-bottom:6px;color:#3C3489;">LLM — même principe, échelle radicale</div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">Regarde toute la fenêtre de contexte en parallèle (mécanisme d'attention). Des milliards de paramètres, entraînés sur des centaines de milliards de tokens. La tâche est toujours : <span style="color:var(--color-text-primary);font-weight:500;">P(mot suivant | tout ce qui précède)</span>.</div>
+      </div>
+    </div>
+    <div style="margin-top:1.2rem;">
+      <button class="btn" onclick="sendPrompt('Explique-moi le mécanisme d\'attention du transformer de façon pédagogique, en partant du bigramme qu\'on vient de voir')">Comment l'attention améliore ça ? ↗</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let model = {};
+let vocab = [];
+let corpus = [];
+
+function tokenize(text) {
+  return text.toLowerCase()
+    .replace(/[«»""„‟]/g, ' ')
+    .replace(/[.,;:!?()\[\]{}"'\/\\—–\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(w => w.length > 0);
+}
+
+function buildModel() {
+  const text = document.getElementById('corpusInput').value;
+  corpus = tokenize(text);
+  model = {};
+  const vocabSet = new Set(corpus);
+  vocab = Array.from(vocabSet).sort();
+
+  for (let i = 0; i < corpus.length - 1; i++) {
+    const w = corpus[i];
+    const next = corpus[i+1];
+    if (!model[w]) model[w] = {};
+    model[w][next] = (model[w][next] || 0) + 1;
+  }
+
+  let bigramTotal = 0;
+  for (const w of Object.keys(model)) bigramTotal += Object.keys(model[w]).length;
+
+  document.getElementById('tokenCount').textContent = corpus.length;
+  document.getElementById('vocabCount').textContent = vocab.length;
+  document.getElementById('bigramCount').textContent = bigramTotal;
+  document.getElementById('statsRow').style.display = 'flex';
+  document.getElementById('buildStatus').textContent = '✓ Modèle construit';
+
+  renderBigrams();
+  renderWordPills();
+  populateStartWord();
+}
+
+function renderBigrams() {
+  const container = document.getElementById('bigramDisplay');
+  const pairs = [];
+  for (const w of Object.keys(model)) {
+    for (const next of Object.keys(model[w])) {
+      pairs.push({ w, next, count: model[w][next] });
+    }
+  }
+  pairs.sort((a,b) => b.count - a.count);
+  container.innerHTML = pairs.slice(0, 30).map(p =>
+    `<div class="bigram-card"><div class="bigram-pair">${p.w} → ${p.next}</div><div class="bigram-count">${p.count}×</div></div>`
+  ).join('');
+}
+
+function renderWordPills() {
+  const container = document.getElementById('wordPills');
+  const words = Object.keys(model).sort();
+  container.innerHTML = words.map(w =>
+    `<span class="word-pill" data-word="${w}" onclick="selectWord('${w}')">${w}</span>`
+  ).join('');
+  const interesting = ['candide','il','le','la','les','un','une','de'];
+  const first = interesting.find(w => model[w]) || words[0];
+  if (first) selectWord(first);
+}
+
+function selectWord(word) {
+  document.querySelectorAll('.word-pill').forEach(p => p.classList.remove('selected'));
+  const pill = document.querySelector(`.word-pill[data-word="${word}"]`);
+  if (pill) { pill.classList.add('selected'); pill.scrollIntoView({block:'nearest'}); }
+  renderProbs(word);
+}
+
+function getProbs(word, temp) {
+  const counts = model[word];
+  if (!counts) return [];
+  const t = temp || 1.0;
+  const entries = Object.entries(counts);
+  const total = entries.reduce((s,[,c]) => s+c, 0);
+  const raw = entries.map(([w,c]) => [w, c/total]);
+  const scaled = raw.map(([w,p]) => [w, Math.pow(p, 1/t)]);
+  const scaledSum = scaled.reduce((s,[,p]) => s+p, 0);
+  return scaled.map(([w,p]) => ({ word: w, prob: p/scaledSum, raw: raw.find(r=>r[0]===w)[1] }))
+    .sort((a,b) => b.prob - a.prob);
+}
+
+function renderProbs(word) {
+  const container = document.getElementById('probDisplay');
+  const probs = getProbs(word, 1.0);
+  if (!probs.length) { container.innerHTML = '<div style="font-size:13px;color:var(--color-text-secondary);">Ce mot n\'est jamais suivi d\'un autre dans le corpus.</div>'; return; }
+  const top = probs.slice(0, 8);
+  container.innerHTML = `
+    <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:10px;">
+      Après <b style="color:var(--color-text-primary);">${word}</b>, le modèle prédit :
+    </div>
+    ${top.map(p => `
+      <div class="prob-bar-wrap">
+        <span class="prob-label">${p.word}</span>
+        <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${(p.prob*100).toFixed(1)}%"></div></div>
+        <span class="prob-val">${(p.prob*100).toFixed(0)}%</span>
+      </div>`).join('')}
+    ${probs.length > 8 ? `<div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px;">+${probs.length-8} autres mots possibles</div>` : ''}
+  `;
+}
+
+function populateStartWord() {
+  const sel = document.getElementById('startWord');
+  const interesting = ['candide','il','le','la','les','un','une','de','rien','tout'];
+  const available = interesting.filter(w => model[w]);
+  const rest = Object.keys(model).sort().filter(w => !available.includes(w));
+  const words = [...available, ...rest];
+  sel.innerHTML = words.map(w => `<option value="${w}">${w}</option>`).join('');
+}
+
+document.getElementById('tempSlider').addEventListener('input', function() {
+  const val = (parseInt(this.value)/10).toFixed(1);
+  document.getElementById('tempVal').textContent = val;
+});
+
+function sampleFromProbs(probs) {
+  const r = Math.random();
+  let cum = 0;
+  for (const p of probs) {
+    cum += p.prob;
+    if (r <= cum) return p.word;
+  }
+  return probs[probs.length-1].word;
+}
+
+function generateText() {
+  const start = document.getElementById('startWord').value;
+  const temp = parseInt(document.getElementById('tempSlider').value)/10;
+  const maxLen = 24;
+  const words = [start];
+  let current = start;
+  let lastProbs = null;
+  for (let i = 0; i < maxLen; i++) {
+    const probs = getProbs(current, temp);
+    if (!probs.length) break;
+    lastProbs = probs;
+    const next = sampleFromProbs(probs);
+    words.push(next);
+    current = next;
+  }
+  const container = document.getElementById('generatedOut');
+  container.innerHTML = words.map((w,i) =>
+    `<span class="gen-word${i===words.length-1?' new':''}">${w} </span>`
+  ).join('');
+
+  if (lastProbs) {
+    const top = lastProbs.slice(0,5);
+    document.getElementById('generatedProbs').innerHTML =
+      `<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;">Dernier choix (après "<b style='color:var(--color-text-primary)'>${words[words.length-2]||''}</b>") :</div>` +
+      top.map(p => `
+        <div class="prob-bar-wrap">
+          <span class="prob-label" style="font-size:12px;">${p.word}</span>
+          <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${(p.prob*100).toFixed(1)}%"></div></div>
+          <span class="prob-val">${(p.prob*100).toFixed(0)}%</span>
+        </div>`).join('');
+  }
+}
+
+document.querySelectorAll('.step-pill').forEach(pill => {
+  pill.addEventListener('click', function() {
+    const step = parseInt(this.dataset.step);
+    document.querySelectorAll('.step-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('panel'+step).classList.add('active');
+  });
+});
+
+buildModel();
+</script>

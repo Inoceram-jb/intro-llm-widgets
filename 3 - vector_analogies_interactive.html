@@ -1,0 +1,277 @@
+
+<style>
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.preset-btn{padding:5px 12px;font-size:12px;cursor:pointer;border-radius:99px;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-secondary);white-space:nowrap}
+.preset-btn:hover{background:var(--color-background-primary);color:var(--color-text-primary)}
+.preset-btn.active{background:#3C3489;color:#EEEDFE;border-color:#3C3489}
+.sel-row{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.sel-label{font-size:13px;color:var(--color-text-secondary);min-width:24px}
+.op-badge{font-size:16px;font-weight:500;color:var(--color-text-secondary);min-width:18px;text-align:center}
+.result-box{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:12px 16px;margin-top:12px;font-size:14px;color:var(--color-text-primary)}
+.result-word{font-size:22px;font-weight:500;color:#3C3489}
+.sim-bar-wrap{display:flex;align-items:center;gap:8px;margin:3px 0}
+.sim-label{font-size:12px;font-family:var(--font-mono);min-width:72px;color:var(--color-text-primary)}
+.sim-bg{flex:1;height:14px;background:var(--color-background-primary);border-radius:3px;overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
+.sim-fill{height:100%;background:#7F77DD;border-radius:3px;transition:width .4s}
+.sim-val{font-size:11px;min-width:32px;text-align:right;color:var(--color-text-secondary)}
+</style>
+
+<h2 class="sr-only">Démo interactive d'analogies vectorielles : A − B + C = ?</h2>
+
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
+  <button class="preset-btn active" onclick="loadPreset(0)">roi − homme + femme</button>
+  <button class="preset-btn" onclick="loadPreset(1)">Paris − France + Italie</button>
+  <button class="preset-btn" onclick="loadPreset(2)">chien − animal + végétal</button>
+  <button class="preset-btn" onclick="loadPreset(3)">chaud − été + hiver</button>
+  <button class="preset-btn" onclick="loadPreset(4)">nageur − nager + courir</button>
+</div>
+
+<div class="sel-row">
+  <span class="sel-label">A</span>
+  <select id="selA" style="font-size:13px;padding:5px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)"></select>
+  <span class="op-badge">−</span>
+  <select id="selB" style="font-size:13px;padding:5px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)"></select>
+  <span class="op-badge">+</span>
+  <select id="selC" style="font-size:13px;padding:5px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary)"></select>
+  <button onclick="compute()" style="padding:6px 16px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:#3C3489;color:#EEEDFE">= ?</button>
+</div>
+
+<div id="resultBox" class="result-box" style="display:none"></div>
+
+<div style="margin-top:16px;position:relative;width:100%;height:380px">
+  <canvas id="spaceChart" role="img" aria-label="Espace vectoriel 2D montrant la position des mots et la construction de l'analogie">Visualisation de l'espace des embeddings.</canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const WORDS = {
+  roi:     [ 0.85,  0.90],
+  reine:   [ 0.82,  0.45],
+  homme:   [ 0.20,  0.85],
+  femme:   [ 0.18,  0.42],
+  prince:  [ 0.65,  0.88],
+  princesse:[ 0.62, 0.46],
+  Paris:   [-0.80,  0.75],
+  Rome:    [-0.82,  0.30],
+  Berlin:  [-0.84, -0.10],
+  France:  [-0.20,  0.78],
+  Italie:  [-0.22,  0.32],
+  Allemagne:[-0.24,-0.08],
+  chien:   [ 0.10, -0.60],
+  chat:    [ 0.05, -0.75],
+  rose:    [-0.10, -0.62],
+  tulipe:  [-0.15, -0.78],
+  animal:  [ 0.30, -0.50],
+  végétal: [-0.28, -0.55],
+  été:     [ 0.60, -0.20],
+  hiver:   [ 0.60, -0.70],
+  chaud:   [ 0.75, -0.22],
+  froid:   [ 0.75, -0.72],
+  nageur:  [ 0.40,  0.20],
+  coureur: [ 0.38, -0.15],
+  nager:   [ 0.55,  0.25],
+  courir:  [ 0.53, -0.12],
+};
+
+const PRESETS = [
+  {a:'roi',   b:'homme',  c:'femme',   expect:'reine'},
+  {a:'Paris', b:'France', c:'Italie',  expect:'Rome'},
+  {a:'chien', b:'animal', c:'végétal', expect:'rose'},
+  {a:'chaud', b:'été',    c:'hiver',   expect:'froid'},
+  {a:'nageur',b:'nager',  c:'courir',  expect:'coureur'},
+];
+
+const CAT_COLORS = {
+  royauté:  {dot:'#7F77DD', label:'#3C3489'},
+  lieux:    {dot:'#1D9E75', label:'#085041'},
+  nature:   {dot:'#D85A30', label:'#712B13'},
+  saisons:  {dot:'#BA7517', label:'#633806'},
+  actions:  {dot:'#378ADD', label:'#0C447C'},
+};
+const WORD_CATS = {
+  roi:'royauté',reine:'royauté',homme:'royauté',femme:'royauté',prince:'royauté',princesse:'royauté',
+  Paris:'lieux',Rome:'lieux',Berlin:'lieux',France:'lieux',Italie:'lieux',Allemagne:'lieux',
+  chien:'nature',chat:'nature',rose:'nature',tulipe:'nature',animal:'nature',végétal:'nature',
+  été:'saisons',hiver:'saisons',chaud:'saisons',froid:'saisons',
+  nageur:'actions',coureur:'actions',nager:'actions',courir:'actions',
+};
+
+const allWords = Object.keys(WORDS);
+
+function fillSelects(){
+  ['selA','selB','selC'].forEach(id=>{
+    const sel = document.getElementById(id);
+    sel.innerHTML = allWords.map(w=>`<option value="${w}">${w}</option>`).join('');
+  });
+}
+
+function cosSim(a,b){
+  const dot = a[0]*b[0]+a[1]*b[1];
+  const na = Math.sqrt(a[0]**2+a[1]**2);
+  const nb = Math.sqrt(b[0]**2+b[1]**2);
+  return dot/(na*nb);
+}
+
+function vecAdd(a,b){return [a[0]+b[0],a[1]+b[1]];}
+function vecSub(a,b){return [a[0]-b[0],a[1]-b[1]];}
+
+let chart = null;
+let currentA='roi', currentB='homme', currentC='femme';
+
+function compute(){
+  currentA = document.getElementById('selA').value;
+  currentB = document.getElementById('selB').value;
+  currentC = document.getElementById('selC').value;
+
+  const va=WORDS[currentA], vb=WORDS[currentB], vc=WORDS[currentC];
+  const target = vecAdd(vecSub(va,vb),vc);
+
+  const exclude = new Set([currentA,currentB,currentC]);
+  const ranked = allWords
+    .filter(w=>!exclude.has(w))
+    .map(w=>({w, sim: cosSim(target, WORDS[w])}))
+    .sort((a,b)=>b.sim-a.sim);
+
+  const best = ranked[0];
+  const top5 = ranked.slice(0,5);
+
+  const barsHtml = top5.map(r=>`
+    <div class="sim-bar-wrap">
+      <span class="sim-label">${r.w}</span>
+      <div class="sim-bg"><div class="sim-fill" style="width:${Math.max(0,(r.sim*100)).toFixed(1)}%"></div></div>
+      <span class="sim-val">${(r.sim*100).toFixed(0)}%</span>
+    </div>`).join('');
+
+  document.getElementById('resultBox').style.display='block';
+  document.getElementById('resultBox').innerHTML=`
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
+      <span style="font-size:14px;color:var(--color-text-secondary)">${currentA} − ${currentB} + ${currentC} ≈</span>
+      <span class="result-word">${best.w}</span>
+      <span style="font-size:13px;color:var(--color-text-secondary)">(similarité ${(best.sim*100).toFixed(0)}%)</span>
+    </div>
+    <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px">Top 5 mots les plus proches du vecteur cible :</div>
+    ${barsHtml}`;
+
+  drawChart(target, best.w);
+}
+
+function drawChart(target, bestWord){
+  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridCol = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const tickCol = isDark ? '#888780' : '#5F5E5A';
+
+  const basePoints = allWords.map(w=>{
+    const cat = WORD_CATS[w]||'nature';
+    const cc = CAT_COLORS[cat];
+    const isA=(w===currentA), isB=(w===currentB), isC=(w===currentC);
+    const isResult=(w===bestWord);
+    return {
+      x: WORDS[w][0], y: WORDS[w][1],
+      label: w,
+      isA, isB, isC, isResult,
+      bgColor: isA?'#FAC775':isB?'#F0997B':isC?'#9FE1CB':isResult?'#CECBF6':cc.dot+'99',
+      borderColor: isA?'#BA7517':isB?'#993C1D':isC?'#0F6E56':isResult?'#534AB7':cc.dot,
+      radius: (isA||isB||isC||isResult)?9:5,
+      borderWidth: (isA||isB||isC||isResult)?2:1,
+    };
+  });
+
+  const targetPoint = {x:target[0], y:target[1]};
+
+  if(chart){ chart.destroy(); chart=null; }
+
+  const ctx = document.getElementById('spaceChart').getContext('2d');
+
+  const annotation = {
+    type:'line',
+    xMin: WORDS[currentA][0], yMin: WORDS[currentA][1],
+    xMax: targetPoint.x, yMax: targetPoint.y,
+    borderColor:'rgba(127,119,221,0.4)',
+    borderWidth:1.5,
+    borderDash:[4,3],
+  };
+
+  chart = new Chart(ctx,{
+    type:'scatter',
+    data:{
+      datasets:[
+        {
+          label:'mots',
+          data: basePoints.map(p=>({x:p.x,y:p.y,label:p.label})),
+          pointBackgroundColor: basePoints.map(p=>p.bgColor),
+          pointBorderColor: basePoints.map(p=>p.borderColor),
+          pointRadius: basePoints.map(p=>p.radius),
+          pointHoverRadius: basePoints.map(p=>p.radius+2),
+          pointBorderWidth: basePoints.map(p=>p.borderWidth),
+        },
+        {
+          label:'vecteur cible',
+          data:[{x:targetPoint.x, y:targetPoint.y, label:'cible'}],
+          pointBackgroundColor:'rgba(127,119,221,0.15)',
+          pointBorderColor:'#534AB7',
+          pointRadius:13,
+          pointBorderWidth:1.5,
+          pointStyle:'crossRot',
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label(ctx){
+              const d=ctx.raw;
+              return d.label || 'cible';
+            }
+          }
+        }
+      },
+      scales:{
+        x:{min:-1.2,max:1.2,grid:{color:gridCol},ticks:{color:tickCol,font:{size:11}},title:{display:false}},
+        y:{min:-1.1,max:1.1,grid:{color:gridCol},ticks:{color:tickCol,font:{size:11}},title:{display:false}},
+      }
+    },
+    plugins:[{
+      id:'wordLabels',
+      afterDatasetsDraw(chart){
+        const {ctx} = chart;
+        const meta = chart.getDatasetMeta(0);
+        ctx.save();
+        ctx.font='12px sans-serif';
+        meta.data.forEach((pt,i)=>{
+          const d = basePoints[i];
+          const isKey = d.isA||d.isB||d.isC||d.isResult;
+          ctx.fillStyle = isKey
+            ? (d.isA?'#633806':d.isB?'#712B13':d.isC?'#085041':'#3C3489')
+            : (isDark?'#B4B2A9':'#5F5E5A');
+          ctx.font = isKey ? '500 12px sans-serif' : '12px sans-serif';
+          ctx.fillText(d.label, pt.x+10, pt.y-4);
+        });
+        const tMeta = chart.getDatasetMeta(1);
+        if(tMeta.data[0]){
+          const tp = tMeta.data[0];
+          ctx.fillStyle='#534AB7';
+          ctx.font='500 12px sans-serif';
+          ctx.fillText('cible calculée', tp.x+14, tp.y-4);
+        }
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function loadPreset(idx){
+  document.querySelectorAll('.preset-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  const p=PRESETS[idx];
+  document.getElementById('selA').value=p.a;
+  document.getElementById('selB').value=p.b;
+  document.getElementById('selC').value=p.c;
+  compute();
+}
+
+fillSelects();
+loadPreset(0);
+</script>
